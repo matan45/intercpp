@@ -17,7 +17,6 @@ void Environment::registerUserFunction(const std::string& name, ASTNode* functio
 	userFunctionRegistry[name] = functionNode;
 }
 
-// Evaluate a function by name with given arguments
 double Environment::evaluateFunction(const std::string& name, const std::vector<double>& args) const {
 	// Check if the function is a C++ native function
 	if (functionRegistry.contains(name)) {
@@ -48,12 +47,23 @@ double Environment::evaluateFunction(const std::string& name, const std::vector<
 			functionEnv.setVariable(param.first, args[i]);
 		}
 
-		// Evaluate the function body
-		return functionNode->body->evaluate(functionEnv);
+		try {
+			// Execute the function body
+			functionNode->body->evaluate(functionEnv);
+			std::cout << "Function " << name << " completed without an explicit return." << std::endl;
+			return 0.0; // Default return value if no explicit return is encountered
+		}
+		catch (double returnValue) {
+			// Catch the return value thrown by ReturnNode and propagate it as the function result
+			std::cout << "Function " << name << " returned value " << returnValue << std::endl;
+			return returnValue;
+		}
 	}
 
 	throw std::runtime_error("Undefined function: " + name);
 }
+
+
 
 // Declare a variable by name and type
 void Environment::declareVariable(const std::string& name, ValueType type) {
@@ -109,7 +119,7 @@ void Environment::setVariable(const std::string& name, const VariableValue& valu
 
 	// Assign the value to the variable
 	variableTable[name].first = value;
-	std::cout << "Environment: Updated variable " << name << " to new value." << std::endl;
+	std::cout << "Environment: Updated variable " << name << " to new value." <<  std::endl;
 }
 
 // Get a variable's value

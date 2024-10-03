@@ -118,10 +118,26 @@ Token Lexer::getNextToken() {
 			return Token(TokenType::GREATER);
 		}
 
+		if (current == '+') {
+			if (pos + 1 < input.length() && input[pos + 1] == '+') {
+				pos += 2;
+				return Token(TokenType::PLUSPLUS);
+			}
+			++pos;
+			return Token(TokenType::PLUS);
+		}
+
+		if (current == '-') {
+			if (pos + 1 < input.length() && input[pos + 1] == '-') {
+				pos += 2;
+				return Token(TokenType::MINUSMINUS);
+			}
+			++pos;
+			return Token(TokenType::MINUS);
+		}
+
 		// Handling single-character tokens and maintaining stack balance
 		switch (current) {
-		case '+': ++pos; return Token(TokenType::PLUS);
-		case '-': ++pos; return Token(TokenType::MINUS);
 		case '*': ++pos; return Token(TokenType::MULTIPLY);
 		case '/': ++pos; return Token(TokenType::DIVIDE);
 		case '=': ++pos; return Token(TokenType::ASSIGN);

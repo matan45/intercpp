@@ -165,6 +165,7 @@ int test5() {
 	//TODO fix this
 	// Example script with for loop and do-while loop
 	std::string input = R"(
+
 func int sumUpTo(int n) {
     int sum = 0;
     int i = 1;
@@ -204,16 +205,17 @@ func int incrementTest(int n) {
     return i;
 }
 
-int main() {
+
     int result1 = sumUpTo(5);      // Should return 15
     int result2 = factorial(5);    // Should return 120
- int result3 = incrementTest(5);    // Should return 120
+    int result3 = incrementTest(5);  
 
     // Assume a print function exists
     print(result1);
     print(result2);
-print(result3);
-}
+	print(result3);
+
+
     )";
 
 	Lexer lexer(input);
@@ -260,6 +262,10 @@ func bool testLogic() {
 
     bool result1 = evaluateLogic(a, b);        // Should return false (true && false)
     bool result2 = evaluateComplexLogic(a, b, c); // Should return true ((true && false) || true)
+
+	if (a){}
+	else if (b){}
+	else {}
 
     return result1 || result2;  // This should return true
 }
@@ -433,14 +439,20 @@ int test9() {
 
 int main() {
 	
-  	test1();
-  	test2();
- 	test3();
-	test4();
-	/**test5();
-	test6();
-	test7();*/
+   	test1();
+   	test2();
+  	test3();
+ 	test4();
+	test5();
+	//test6();
+	//test7();
 	test8();
 	test9();
+	//need to add switch case
+	// final for variables
+	// imports from other file
+	// enum
+	// arrays and maps
+	// classes
 }
 

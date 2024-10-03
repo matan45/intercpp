@@ -44,10 +44,26 @@ ASTNode* Parser::parseStatement() {
 			// Function call statement
 			return parseFunctionCall(identifier);
 		}
+		else if (currentToken.type == TokenType::PLUSPLUS || currentToken.type == TokenType::MINUSMINUS) {
+			// Postfix increment or decrement statement
+			TokenType op = currentToken.type;
+			eat(op);
+			eat(TokenType::SEMICOLON);
+			return new IncrementNode(op == TokenType::PLUSPLUS ? IncrementType::POSTFIX : IncrementType::POSTFIX, identifier);
+		}
 		else {
 			// If neither assignment nor function call, it might be an error
 			throw std::runtime_error("Unexpected token after identifier: " + currentToken.stringValue);
 		}
+	}
+	else if (currentToken.type == TokenType::PLUSPLUS || currentToken.type == TokenType::MINUSMINUS) {
+		// Prefix increment or decrement statement
+		TokenType op = currentToken.type;
+		eat(op);
+		std::string identifier = currentToken.stringValue;
+		eat(TokenType::IDENTIFIER);
+		eat(TokenType::SEMICOLON);
+		return new IncrementNode(op == TokenType::PLUSPLUS ? IncrementType::PREFIX : IncrementType::PREFIX, identifier);
 	}
 	else if (currentToken.type == TokenType::RETURN) {
 		// Return statement
@@ -82,12 +98,6 @@ ASTNode* Parser::parseStatement() {
 		eat(TokenType::RBRACE);
 		return new BlockNode(bodyStatements);
 	}
-	else if (currentToken.type == TokenType::SEMICOLON) {
-		// Empty statement (e.g., after a loop or condition)
-		eat(TokenType::SEMICOLON);
-		return nullptr; // Empty statement, no action required
-	}
-
 	// Throw an error for an unrecognized token
 	throw std::runtime_error("Unexpected token in statement: " + tokenToString(currentToken));
 }
@@ -113,12 +123,51 @@ ASTNode* Parser::parseForStatement() {
 	ASTNode* condition = parseExpression();
 	eat(TokenType::SEMICOLON);
 
+	ASTNode* update = nullptr;
 	// Parse the update expression
-	ASTNode* update = parseExpression();
+	if (currentToken.type != TokenType::RPAREN) {
+		// Here we handle various forms of update, including increments and assignments.
+		if (currentToken.type == TokenType::PLUSPLUS || currentToken.type == TokenType::MINUSMINUS) {
+			// Handle prefix increment or decrement (e.g., ++i or --i)
+			TokenType op = currentToken.type;
+			eat(op);
+			std::string identifier = currentToken.stringValue;
+			eat(TokenType::IDENTIFIER);
+			update = new IncrementNode(op == TokenType::PLUSPLUS ? IncrementType::PREFIX : IncrementType::PREFIX, identifier);
+		}
+		else if (currentToken.type == TokenType::IDENTIFIER) {
+			std::string identifier = currentToken.stringValue;
+			eat(TokenType::IDENTIFIER);
+			if (currentToken.type == TokenType::PLUSPLUS || currentToken.type == TokenType::MINUSMINUS) {
+				// Handle postfix increment or decrement (e.g., i++ or i--)
+				TokenType op = currentToken.type;
+				eat(op);
+				update = new IncrementNode(op == TokenType::PLUSPLUS ? IncrementType::POSTFIX : IncrementType::POSTFIX, identifier);
+			}
+			else {
+				// Handle assignments (e.g., i = i + 1)
+				eat(TokenType::ASSIGN);
+				ASTNode* valueExpr = parseExpression();
+				update = new AssignmentNode(identifier, valueExpr);
+			}
+		}
+		else {
+			// Parse a more complex update expression
+			update = parseExpression();
+		}
+	}
 	eat(TokenType::RPAREN);
 
-	// Parse the loop body
-	ASTNode* body = parseStatement();
+	eat(TokenType::LBRACE);
+	// Parse the block of statements that make up the function body
+	std::vector<ASTNode*> bodyStatements;//also do to this in the if node and the loops
+	while (currentToken.type != TokenType::RBRACE) {
+		bodyStatements.push_back(parseStatement());
+	}
+	eat(TokenType::RBRACE);
+
+	// Create a BlockNode to represent the entire function body
+	ASTNode* body = new BlockNode(bodyStatements);
 
 	return new ForNode(initializer, condition, update, body);
 }
@@ -161,8 +210,15 @@ ASTNode* Parser::parseFunctionDefinition() {
 	eat(TokenType::RPAREN);
 
 	eat(TokenType::LBRACE);
-	ASTNode* body = parseStatement();
+	// Parse the block of statements that make up the function body
+	std::vector<ASTNode*> bodyStatements;//also do to this in the if node and the loops
+	while (currentToken.type != TokenType::RBRACE) {
+		bodyStatements.push_back(parseStatement());
+	}
 	eat(TokenType::RBRACE);
+
+	// Create a BlockNode to represent the entire function body
+	ASTNode* body = new BlockNode(bodyStatements);
 
 	FunctionNode* functionNode = new FunctionNode(functionName, returnType, parameters, body);
 	env.registerUserFunction(functionName, functionNode);
@@ -174,7 +230,16 @@ ASTNode* Parser::parseWhileStatement() {
 	eat(TokenType::LPAREN);
 	ASTNode* condition = parseExpression();
 	eat(TokenType::RPAREN);
-	ASTNode* body = parseStatement();
+	eat(TokenType::LBRACE);
+	// Parse the block of statements that make up the function body
+	std::vector<ASTNode*> bodyStatements;//also do to this in the if node and the loops
+	while (currentToken.type != TokenType::RBRACE) {
+		bodyStatements.push_back(parseStatement());
+	}
+	eat(TokenType::RBRACE);
+
+	// Create a BlockNode to represent the entire function body
+	ASTNode* body = new BlockNode(bodyStatements);
 	return new WhileNode(condition, body);
 }
 
@@ -453,7 +518,7 @@ std::string Parser::tokenToString(const Token& token) {
 	case TokenType::GREATER: return "GREATER (>)";
 	case TokenType::LESS: return "LESS (<)";
 	case TokenType::GREATER_EQUALS: return "GREATER EQUALS (>=)";
-	case TokenType::LESS_EQUALS: return "LESS EQUALS (>=)";
+	case TokenType::LESS_EQUALS: return "LESS EQUALS (<=)";
 	default: return "UNKNOWN TOKEN";
 	}
 }

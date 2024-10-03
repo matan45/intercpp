@@ -26,6 +26,18 @@ struct ProgramNode : public ASTNode {
 	~ProgramNode() override;
 };
 
+struct IncrementNode : public ASTNode {
+	IncrementType incrementType;
+	std::string variableName;
+
+	explicit IncrementNode(IncrementType type, const std::string& varName)
+		: incrementType(type), variableName(varName) {}
+
+	double evaluate(Environment& env) const override;
+	~IncrementNode() override = default;
+
+};
+
 struct ForNode : public ASTNode {
 	ASTNode* initializer;  // Variable declaration or assignment
 	ASTNode* condition;    // Loop condition

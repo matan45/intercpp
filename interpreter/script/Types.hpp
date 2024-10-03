@@ -18,7 +18,13 @@ enum class TokenType {
 	FUNC, RETURN, IF, ELSE, WHILE, FOR, // Keywords
 	INT, FLOAT, BOOL, STRING_TYPE, // Data types
 	TRUE, FALSE, DO,
+	PLUSPLUS, MINUSMINUS,
 	END // End of input
+};
+
+enum class IncrementType {
+	PREFIX,
+	POSTFIX
 };
 
 // Define supported value types

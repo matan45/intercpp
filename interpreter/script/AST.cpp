@@ -48,7 +48,7 @@ bool BooleanNode::evaluateBool(Environment& env) const {
 }
 
 
-double StringNode::evaluate(Environment& env) const  {
+double StringNode::evaluate(Environment& env) const {
 	// This method returns 0 as this is primarily for printing purposes.
 	return 0;
 }
@@ -57,7 +57,7 @@ std::string StringNode::evaluateString(Environment& env) const {
 	return value;
 }
 
-double DoWhileNode::evaluate(Environment& env) const  {
+double DoWhileNode::evaluate(Environment& env) const {
 	double result = 0;
 	do {
 		result = body->evaluate(env);
@@ -70,9 +70,37 @@ DoWhileNode::~DoWhileNode() {
 	delete condition;
 }
 
-double BlockNode::evaluate(Environment& env) const  {
+double IncrementNode::evaluate(Environment& env) const {
+	VariableValue value = env.getVariable(variableName);
+	if (!std::holds_alternative<double>(value)) {
+		throw std::runtime_error("Increment operation only supports numeric types.");
+	}
+
+	double& varValue = std::get<double>(value);
+	double originalValue = varValue;
+
+	// Update the variable in the environment
+	if (incrementType == IncrementType::PREFIX) {
+		++varValue;  // Increment first, then return
+		env.setVariable(variableName, varValue);
+		return varValue;
+	}
+	else {
+		varValue++;  // Return original, then increment
+		env.setVariable(variableName, varValue);
+		return originalValue;
+	}
+}
+
+double BlockNode::evaluate(Environment& env) const {
 	for (ASTNode* statement : statements) {
-		statement->evaluate(env);
+		try {
+			statement->evaluate(env);
+		}
+		catch (const ReturnNode& returnNode) {
+			// Catch the ReturnNode and rethrow it to propagate it up the call stack
+			throw returnNode;
+		}
 	}
 	return 0; // A block doesn’t return a value directly
 }
@@ -83,7 +111,7 @@ BlockNode::~BlockNode() {
 	}
 }
 
-double UnaryOpNode::evaluate(Environment& env) const  {
+double UnaryOpNode::evaluate(Environment& env) const {
 	double value = operand->evaluate(env);
 	switch (op) {
 	case TokenType::MINUS: return -value;
@@ -96,7 +124,7 @@ UnaryOpNode::~UnaryOpNode() {
 	delete operand;
 }
 
-double BinaryOpNode::evaluate(Environment& env) const  {
+double BinaryOpNode::evaluate(Environment& env) const {
 	double leftValue = left->evaluate(env);
 	double rightValue = right->evaluate(env);
 
@@ -126,7 +154,7 @@ BinaryOpNode::~BinaryOpNode() {
 	delete right;
 }
 
-double WhileNode::evaluate(Environment& env) const  {
+double WhileNode::evaluate(Environment& env) const {
 	double result = 0;
 	while (condition->evaluate(env) != 0) {
 		result = body->evaluate(env);
@@ -140,7 +168,7 @@ WhileNode::~WhileNode() {
 }
 
 
-double IfNode::evaluate(Environment& env) const  {
+double IfNode::evaluate(Environment& env) const {
 	double conditionValue = condition->evaluate(env);
 	std::cout << "IfNode: conditionValue" << conditionValue << std::endl;
 	if (conditionValue != 0) {
@@ -158,8 +186,11 @@ IfNode::~IfNode() {
 	delete elseBranch;
 }
 
-double ReturnNode::evaluate(Environment& env) const  {
-	return returnValue->evaluate(env);
+double ReturnNode::evaluate(Environment& env) const {
+	double result = returnValue->evaluate(env);
+
+	std::cout << "ReturnNode: Returning value " << result << std::endl;
+	throw result;
 }
 
 ReturnNode::~ReturnNode() {
@@ -174,17 +205,7 @@ double FunctionCallNode::evaluate(Environment& env) const {
 		}
 
 		ASTNode* arg = arguments[0];
-		VariableValue value;
-
-		// Try evaluating the argument to get its value.
-		if (auto varNode = dynamic_cast<VariableNode*>(arg)) {
-			// If it's a variable node, get the value from the environment.
-			value = env.getVariable(varNode->name);
-		}
-		else {
-			// If it's not a variable node, directly evaluate it.
-			value = evaluateArg(arg, env);
-		}
+		VariableValue value = evaluateArg(arg, env);
 
 		// Output the value based on its type.
 		if (std::holds_alternative<double>(value)) {
@@ -205,6 +226,7 @@ double FunctionCallNode::evaluate(Environment& env) const {
 	else {
 		// Handle other user-defined functions.
 		std::vector<double> evaluatedArgs;
+
 		for (ASTNode const* arg : arguments) {
 			evaluatedArgs.push_back(arg->evaluate(env));
 		}
@@ -214,23 +236,25 @@ double FunctionCallNode::evaluate(Environment& env) const {
 }
 
 
+
 VariableValue FunctionCallNode::evaluateArg(ASTNode* arg, Environment& env) const {
-	// Handle different types of nodes and evaluate them
+	// Handle different types of nodes and evaluate them.
 	if (auto varNode = dynamic_cast<VariableNode*>(arg)) {
 		return env.getVariable(varNode->name);
 	}
 	else if (auto numNode = dynamic_cast<NumberNode*>(arg)) {
-		return numNode->evaluate(env); // Returns double directly
+		return numNode->evaluate(env); // Returns double directly.
 	}
 	else if (auto strNode = dynamic_cast<StringNode*>(arg)) {
-		return strNode->evaluateString(env); // Returns the string value
+		return strNode->value; // Return the string value directly.
 	}
-	else if (auto boolNode = dynamic_cast<UnaryOpNode*>(arg)) {
-		return boolNode->evaluate(env); // Handle booleans or unary operations like NOT
+	else if (auto unaryNode = dynamic_cast<UnaryOpNode*>(arg)) {
+		return unaryNode->evaluate(env); // Handle unary operations like NOT.
 	}
 
 	throw std::runtime_error("Unsupported node type in evaluateArg");
 }
+
 
 FunctionCallNode::~FunctionCallNode() {
 	for (ASTNode* arg : arguments) {
@@ -238,7 +262,7 @@ FunctionCallNode::~FunctionCallNode() {
 	}
 }
 
-double FunctionNode::evaluate(Environment& env) const  {
+double FunctionNode::evaluate(Environment& env) const {
 	// FunctionNode itself is not "evaluated"; it's stored in the environment
 	//throw std::runtime_error("FunctionNode cannot be directly evaluated.");
 	return 0;
@@ -248,25 +272,26 @@ FunctionNode::~FunctionNode() {
 	delete body;
 }
 
-double DeclarationNode::evaluate(Environment& env) const  {
+double DeclarationNode::evaluate(Environment& env) const {
 	// Declare the variable in the environment
 	env.declareVariable(variableName, type);
 
 	// If there is an initializer, evaluate it and set the value in the environment
 	if (initializer) {
 		VariableValue value;
+		double evaluatedValue = initializer->evaluate(env);
 
 		switch (type) {
 		case ValueType::INT:
+			value = evaluatedValue;
+			break;
 		case ValueType::FLOAT: {
-			double evaluatedValue = initializer->evaluate(env);
 			value = evaluatedValue;
 			std::cout << "DeclarationNode: Initializing variable " << variableName << " with value " << evaluatedValue << std::endl;
 			break;
 		}
 		case ValueType::BOOL: {
-			bool evaluatedValue = initializer->evaluate(env) != 0;
-			value = evaluatedValue;
+			value = evaluatedValue != 0;
 			std::cout << "DeclarationNode: Initializing boolean variable " << variableName << " with value " << (evaluatedValue ? "true" : "false") << std::endl;
 			break;
 		}
@@ -296,7 +321,7 @@ DeclarationNode::~DeclarationNode() {
 	delete initializer;
 }
 
-double AssignmentNode::evaluate(Environment& env) const  {
+double AssignmentNode::evaluate(Environment& env) const {
 	double value = expression->evaluate(env);
 	std::cout << "AssignmentNode: Assigning value " << value << " to variable " << variableName << std::endl;
 	env.setVariable(variableName, value);
@@ -307,7 +332,7 @@ AssignmentNode::~AssignmentNode() {
 	delete expression;
 }
 
-double VariableNode::evaluate(Environment& env) const  {
+double VariableNode::evaluate(Environment& env) const {
 	auto value = env.getVariable(name);
 	if (std::holds_alternative<double>(value)) {
 		double numValue = std::get<double>(value);
