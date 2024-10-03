@@ -17,7 +17,7 @@ void Environment::registerUserFunction(const std::string& name, ASTNode* functio
 	userFunctionRegistry[name] = functionNode;
 }
 
-double Environment::evaluateFunction(const std::string& name, const std::vector<double>& args) const {
+VariableValue Environment::evaluateFunction(const std::string& name, const std::vector<VariableValue>& args) const {
 	// Check if the function is a C++ native function
 	if (functionRegistry.contains(name)) {
 		return functionRegistry.at(name)(args);
@@ -47,17 +47,12 @@ double Environment::evaluateFunction(const std::string& name, const std::vector<
 			functionEnv.setVariable(param.first, args[i]);
 		}
 
-		try {
-			// Execute the function body
-			functionNode->body->evaluate(functionEnv);
-			std::cout << "Function " << name << " completed without an explicit return." << std::endl;
-			return 0.0; // Default return value if no explicit return is encountered
-		}
-		catch (double returnValue) {
-			// Catch the return value thrown by ReturnNode and propagate it as the function result
-			std::cout << "Function " << name << " returned value " << returnValue << std::endl;
-			return returnValue;
-		}
+
+		// Execute the function body
+		VariableValue value = functionNode->body->evaluate(functionEnv);
+		std::cout << "Function " << name << " completed without an explicit return." << std::endl;
+		return value; // Default return value if no explicit return is encountered
+
 	}
 
 	throw std::runtime_error("Undefined function: " + name);
@@ -72,18 +67,19 @@ void Environment::declareVariable(const std::string& name, ValueType type) {
 	}
 	switch (type) {
 	case ValueType::INT:
+		variableTable[name] = std::make_pair(0.0, type);
+		break;
 	case ValueType::FLOAT:
-		// Initialize numeric types to 0
 		variableTable[name] = std::make_pair(0.0, type);
 		break;
 	case ValueType::BOOL:
-		// Initialize boolean to false
 		variableTable[name] = std::make_pair(false, type);
 		break;
 	case ValueType::STRING:
-		// Initialize string to an empty string
 		variableTable[name] = std::make_pair(std::string(""), type);
 		break;
+	default:
+		throw std::runtime_error("Unsupported variable type for declaration.");
 	}
 }
 
@@ -119,7 +115,7 @@ void Environment::setVariable(const std::string& name, const VariableValue& valu
 
 	// Assign the value to the variable
 	variableTable[name].first = value;
-	std::cout << "Environment: Updated variable " << name << " to new value." <<  std::endl;
+	std::cout << "Environment: Updated variable " << name << " to new value." << std::endl;
 }
 
 // Get a variable's value

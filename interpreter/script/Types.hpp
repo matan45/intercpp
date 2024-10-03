@@ -36,5 +36,5 @@ enum class ValueType {
 };
 
 // Define the type of function signature used for callable functions
-using ScriptFunction = std::function<double(const std::vector<double>&)>;
 using VariableValue = std::variant<double, bool, std::string>;
+using ScriptFunction = std::function<VariableValue(const std::vector<VariableValue>&)>;

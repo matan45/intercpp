@@ -32,7 +32,7 @@ public:
 	void registerUserFunction(const std::string& name, ASTNode* functionNode);
 
 	// Evaluate a function by name with given arguments
-	double evaluateFunction(const std::string& name, const std::vector<double>& args) const;
+	VariableValue evaluateFunction(const std::string& name, const std::vector<VariableValue>& args) const;
 
 	// Declare a variable by name and type
 	void declareVariable(const std::string& name, ValueType type);

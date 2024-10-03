@@ -7,12 +7,27 @@ int test1() {
 	Environment env;
 
 	// Register a built-in print function
-	env.registerFunction("print", [](const std::vector<double>& args) -> double {
+	env.registerFunction("print", [](const std::vector<VariableValue>& args) -> VariableValue {
 		if (args.size() != 1) {
 			throw std::runtime_error("print expects 1 argument");
 		}
-		std::cout << "Print from script: " << args[0] << std::endl;
-		return 0;
+
+		// Determine the type of the argument and print accordingly
+		const VariableValue& value = args[0];
+		if (auto doublePtr = std::get_if<double>(&value)) {
+			std::cout << "Print from script: " << *doublePtr << std::endl;
+		}
+		else if (auto boolPtr = std::get_if<bool>(&value)) {
+			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
+		}
+		else if (auto strPtr = std::get_if<std::string>(&value)) {
+			std::cout << "Print from script: " << *strPtr << std::endl;
+		}
+		else {
+			std::cout << "Print from script: unknown type" << std::endl;
+		}
+
+		return 0.0; // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
@@ -44,12 +59,28 @@ int test2() {
 	Environment env;
 
 	// Register a built-in print function
-	env.registerFunction("print", [](const std::vector<double>& args) -> double {
+	// Register a built-in print function
+	env.registerFunction("print", [](const std::vector<VariableValue>& args) -> VariableValue {
 		if (args.size() != 1) {
 			throw std::runtime_error("print expects 1 argument");
 		}
-		std::cout << "Print from script: " << args[0] << std::endl;
-		return 0;
+
+		// Determine the type of the argument and print accordingly
+		const VariableValue& value = args[0];
+		if (auto doublePtr = std::get_if<double>(&value)) {
+			std::cout << "Print from script: " << *doublePtr << std::endl;
+		}
+		else if (auto boolPtr = std::get_if<bool>(&value)) {
+			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
+		}
+		else if (auto strPtr = std::get_if<std::string>(&value)) {
+			std::cout << "Print from script: " << *strPtr << std::endl;
+		}
+		else {
+			std::cout << "Print from script: unknown type" << std::endl;
+		}
+
+		return 0.0; // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
@@ -78,12 +109,28 @@ int test3() {
 	Environment env;
 
 	// Register a built-in print function
-	env.registerFunction("print", [](const std::vector<double>& args) -> double {
+	// Register a built-in print function
+	env.registerFunction("print", [](const std::vector<VariableValue>& args) -> VariableValue {
 		if (args.size() != 1) {
 			throw std::runtime_error("print expects 1 argument");
 		}
-		std::cout << "Print from script: " << args[0] << std::endl;
-		return 0;
+
+		// Determine the type of the argument and print accordingly
+		const VariableValue& value = args[0];
+		if (auto doublePtr = std::get_if<double>(&value)) {
+			std::cout << "Print from script: " << *doublePtr << std::endl;
+		}
+		else if (auto boolPtr = std::get_if<bool>(&value)) {
+			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
+		}
+		else if (auto strPtr = std::get_if<std::string>(&value)) {
+			std::cout << "Print from script: " << *strPtr << std::endl;
+		}
+		else {
+			std::cout << "Print from script: unknown type" << std::endl;
+		}
+
+		return 0.0; // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
@@ -118,12 +165,28 @@ int test4() {
 	Environment env;
 
 	// Register a built-in print function
-	env.registerFunction("print", [](const std::vector<double>& args) -> double {
+	// Register a built-in print function
+	env.registerFunction("print", [](const std::vector<VariableValue>& args) -> VariableValue {
 		if (args.size() != 1) {
 			throw std::runtime_error("print expects 1 argument");
 		}
-		std::cout << "Print from script: " << args[0] << std::endl;
-		return 0;
+
+		// Determine the type of the argument and print accordingly
+		const VariableValue& value = args[0];
+		if (auto doublePtr = std::get_if<double>(&value)) {
+			std::cout << "Print from script: " << *doublePtr << std::endl;
+		}
+		else if (auto boolPtr = std::get_if<bool>(&value)) {
+			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
+		}
+		else if (auto strPtr = std::get_if<std::string>(&value)) {
+			std::cout << "Print from script: " << *strPtr << std::endl;
+		}
+		else {
+			std::cout << "Print from script: unknown type" << std::endl;
+		}
+
+		return 0.0; // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
@@ -155,12 +218,28 @@ int test5() {
 	Environment env;
 
 	// Register a built-in print function
-	env.registerFunction("print", [](const std::vector<double>& args) -> double {
+	// Register a built-in print function
+	env.registerFunction("print", [](const std::vector<VariableValue>& args) -> VariableValue {
 		if (args.size() != 1) {
 			throw std::runtime_error("print expects 1 argument");
 		}
-		std::cout << "Print from script: " << args[0] << std::endl;
-		return 0;
+
+		// Determine the type of the argument and print accordingly
+		const VariableValue& value = args[0];
+		if (auto doublePtr = std::get_if<double>(&value)) {
+			std::cout << "Print from script: " << *doublePtr << std::endl;
+		}
+		else if (auto boolPtr = std::get_if<bool>(&value)) {
+			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
+		}
+		else if (auto strPtr = std::get_if<std::string>(&value)) {
+			std::cout << "Print from script: " << *strPtr << std::endl;
+		}
+		else {
+			std::cout << "Print from script: unknown type" << std::endl;
+		}
+
+		return 0.0; // Return 0 since print does not produce a value
 		});
 	//TODO fix this
 	// Example script with for loop and do-while loop
@@ -188,6 +267,10 @@ func int factorial(int n) {
     return result;
 }
 
+func string sayHello(){
+	return "hi";
+}
+
 func int incrementTest(int n) {
     int i = 0;
 
@@ -209,11 +292,13 @@ func int incrementTest(int n) {
     int result1 = sumUpTo(5);      // Should return 15
     int result2 = factorial(5);    // Should return 120
     int result3 = incrementTest(5);  
+    string result4 = sayHello();  
 
     // Assume a print function exists
     print(result1);
     print(result2);
 	print(result3);
+	print(result4);
 
 
     )";
@@ -237,12 +322,28 @@ int test6() {
 	Environment env;
 
 	// Register a built-in print function
-	env.registerFunction("print", [](const std::vector<double>& args) -> double {
+	// Register a built-in print function
+	env.registerFunction("print", [](const std::vector<VariableValue>& args) -> VariableValue {
 		if (args.size() != 1) {
 			throw std::runtime_error("print expects 1 argument");
 		}
-		std::cout << "Print from script: " << args[0] << std::endl;
-		return 0;
+
+		// Determine the type of the argument and print accordingly
+		const VariableValue& value = args[0];
+		if (auto doublePtr = std::get_if<double>(&value)) {
+			std::cout << "Print from script: " << *doublePtr << std::endl;
+		}
+		else if (auto boolPtr = std::get_if<bool>(&value)) {
+			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
+		}
+		else if (auto strPtr = std::get_if<std::string>(&value)) {
+			std::cout << "Print from script: " << *strPtr << std::endl;
+		}
+		else {
+			std::cout << "Print from script: unknown type" << std::endl;
+		}
+
+		return 0.0; // Return 0 since print does not produce a value
 		});
 	//TODO fix this
 	// Example script with for loop and do-while loop
@@ -298,14 +399,30 @@ int test7() {
 	Environment env;
 
 	// Register a built-in print function
-	env.registerFunction("print", [](const std::vector<double>& args) -> double {
+	// Register a built-in print function
+	env.registerFunction("print", [](const std::vector<VariableValue>& args) -> VariableValue {
 		if (args.size() != 1) {
 			throw std::runtime_error("print expects 1 argument");
 		}
-		std::cout << "Print from script: " << args[0] << std::endl;
-		return 0;
+
+		// Determine the type of the argument and print accordingly
+		const VariableValue& value = args[0];
+		if (auto doublePtr = std::get_if<double>(&value)) {
+			std::cout << "Print from script: " << *doublePtr << std::endl;
+		}
+		else if (auto boolPtr = std::get_if<bool>(&value)) {
+			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
+		}
+		else if (auto strPtr = std::get_if<std::string>(&value)) {
+			std::cout << "Print from script: " << *strPtr << std::endl;
+		}
+		else {
+			std::cout << "Print from script: unknown type" << std::endl;
+		}
+
+		return 0.0; // Return 0 since print does not produce a value
 		});
-	//TODO fix this
+
 	// Example script with for loop and do-while loop
 	std::string input = R"(
 		int i;
@@ -373,12 +490,25 @@ int test8() {
 	// Now that the function is defined in the environment, call it from C++
 	try {
 		// Arguments to pass to the function
-		std::vector<double> args = { 5, 10 };
+		std::vector<VariableValue> args = { 5.0, 10.0 };
 
 		// Evaluate the function in the script environment
-		double result = env.evaluateFunction("multiply", args);
+		VariableValue result = env.evaluateFunction("multiply", args);
 
-		std::cout << "Result of multiply(5, 10): " << result << std::endl;
+		// Determine the type of result and print accordingly
+		std::cout << "Result of multiply(5, 10): ";
+		if (auto doublePtr = std::get_if<double>(&result)) {
+			std::cout << *doublePtr << std::endl;
+		}
+		else if (auto boolPtr = std::get_if<bool>(&result)) {
+			std::cout << (*boolPtr ? "true" : "false") << std::endl;
+		}
+		else if (auto strPtr = std::get_if<std::string>(&result)) {
+			std::cout << *strPtr << std::endl;
+		}
+		else {
+			std::cout << "unknown type" << std::endl;
+		}
 	}
 	catch (const std::exception& e) {
 		std::cerr << "Error during function call: " << e.what() << std::endl;
@@ -388,23 +518,53 @@ int test8() {
 	return 0;
 }
 
-double addNumbers(const std::vector<double>& args) {
+VariableValue addNumbers(const std::vector<VariableValue>& args) {
 	if (args.size() != 2) {
 		throw std::runtime_error("addNumbers expects exactly 2 arguments.");
 	}
-	return args[0] + args[1];
+
+	// Extract and handle types for addition or concatenation
+	if (auto doublePtr1 = std::get_if<double>(&args[0])) {
+		if (auto doublePtr2 = std::get_if<double>(&args[1])) {
+			// If both arguments are doubles, add them
+			return *doublePtr1 + *doublePtr2;
+		}
+	}
+	else if (auto strPtr1 = std::get_if<std::string>(&args[0])) {
+		if (auto strPtr2 = std::get_if<std::string>(&args[1])) {
+			// If both arguments are strings, concatenate them
+			return *strPtr1 + *strPtr2;
+		}
+	}
+
+	throw std::runtime_error("addNumbers expects either two numbers or two strings.");
 }
 
 int test9() {
 	Environment env;
 
 	// Register a built-in print function
-	env.registerFunction("print", [](const std::vector<double>& args) -> double {
+	 // Register the print function
+	env.registerFunction("print", [](const std::vector<VariableValue>& args) -> VariableValue {
 		if (args.size() != 1) {
 			throw std::runtime_error("print expects 1 argument");
 		}
-		std::cout << "Print from script: " << args[0] << std::endl;
-		return 0;
+
+		const VariableValue& value = args[0];
+		if (auto doublePtr = std::get_if<double>(&value)) {
+			std::cout << "Print from script: " << *doublePtr << std::endl;
+		}
+		else if (auto boolPtr = std::get_if<bool>(&value)) {
+			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
+		}
+		else if (auto strPtr = std::get_if<std::string>(&value)) {
+			std::cout << "Print from script: " << *strPtr << std::endl;
+		}
+		else {
+			std::cout << "Print from script: unknown type" << std::endl;
+		}
+
+		return 0.0;  // Return a default value
 		});
 
 	// Register the C++ function addNumbers into the environment
@@ -444,15 +604,20 @@ int main() {
   	test3();
  	test4();
 	test5();
-	//test6();
-	//test7();
-	test8();
-	test9();
+	//test6(); not working
+ 	test7();
+ 	test8();
+ 	test9();
 	//need to add switch case
 	// final for variables
 	// imports from other file
-	// enum
 	// arrays and maps
-	// classes
+	// classes constructor new object method dot assignment destructor delete
+	// enum
+	// validations
+	//globals functions and variables needs to be equines
+	// class names need to be equines 
+	//cant create functions declensions inside if loops and others functions
+	//also inside class functions and variables needs to be equines
 }
 

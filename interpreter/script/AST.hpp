@@ -12,7 +12,7 @@ class Environment;
 // Base class for all AST nodes
 struct ASTNode {
 	virtual ~ASTNode() = default;
-	virtual double evaluate(Environment& env) const = 0;
+	virtual VariableValue evaluate(Environment& env) const = 0;//todo change the return type to VariableValue
 };
 
 // Program Node: Represents a collection of statements
@@ -21,7 +21,7 @@ struct ProgramNode : public ASTNode {
 
 	explicit ProgramNode(const std::vector<ASTNode*>& statements) : statements(statements) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	~ProgramNode() override;
 };
@@ -33,7 +33,7 @@ struct IncrementNode : public ASTNode {
 	explicit IncrementNode(IncrementType type, const std::string& varName)
 		: incrementType(type), variableName(varName) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 	~IncrementNode() override = default;
 
 };
@@ -47,7 +47,7 @@ struct ForNode : public ASTNode {
 	explicit ForNode(ASTNode* initializer, ASTNode* condition, ASTNode* update, ASTNode* body)
 		: initializer(initializer), condition(condition), update(update), body(body) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	~ForNode() override;
 };
@@ -57,9 +57,7 @@ struct BooleanNode : public ASTNode {
 
 	explicit BooleanNode(bool value) : value(value) {}
 
-	double evaluate(Environment& env) const override;
-
-	bool evaluateBool(Environment& env) const;
+	VariableValue evaluate(Environment& env) const override;
 
 	~BooleanNode() override = default;
 };
@@ -70,9 +68,8 @@ struct StringNode : public ASTNode {
 
 	explicit StringNode(const std::string& value) : value(value) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
-	std::string evaluateString(Environment& env) const;
 	~StringNode() override = default;
 };
 
@@ -84,7 +81,7 @@ struct DoWhileNode : public ASTNode {
 	explicit DoWhileNode(ASTNode* body, ASTNode* condition)
 		: body(body), condition(condition) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	~DoWhileNode() override;
 };
@@ -96,7 +93,7 @@ struct BlockNode : public ASTNode {
 
 	explicit BlockNode(const std::vector<ASTNode*>& statements) : statements(statements) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	~BlockNode() override;
 };
@@ -107,7 +104,8 @@ struct VariableNode : public ASTNode {
 
 	explicit VariableNode(const std::string& name) : name(name) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
+
 	~VariableNode() override = default;
 };
 
@@ -120,7 +118,7 @@ struct DeclarationNode : public ASTNode {
 	explicit DeclarationNode(const std::string& variableName, ValueType type, ASTNode* initializer = nullptr)
 		: variableName(variableName), type(type), initializer(initializer) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	~DeclarationNode() override;
 };
@@ -133,7 +131,7 @@ struct AssignmentNode : public ASTNode {
 	explicit AssignmentNode(const std::string& variableName, ASTNode* expression)
 		: variableName(variableName), expression(expression) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	~AssignmentNode()override;
 };
@@ -145,7 +143,7 @@ struct NumberNode : public ASTNode {
 
 	explicit NumberNode(double value) : value(value) {}
 
-	double evaluate(Environment& env) const override {
+	VariableValue evaluate(Environment& env) const override {
 		return value;
 	}
 
@@ -163,7 +161,7 @@ struct FunctionNode : public ASTNode {
 		const std::vector<std::pair<std::string, ValueType>>& parameters, ASTNode* body)
 		: name(name), returnType(returnType), parameters(parameters), body(body) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	~FunctionNode() override;
 };
@@ -176,7 +174,7 @@ struct FunctionCallNode : public ASTNode {
 	explicit FunctionCallNode(const std::string& name, const std::vector<ASTNode*>& arguments)
 		: name(name), arguments(arguments) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	VariableValue evaluateArg(ASTNode* arg, Environment& env) const;
 
@@ -189,7 +187,7 @@ struct ReturnNode : public ASTNode {
 
 	explicit ReturnNode(ASTNode* returnValue) : returnValue(returnValue) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	~ReturnNode() override;
 };
@@ -203,7 +201,7 @@ struct IfNode : public ASTNode {
 	explicit IfNode(ASTNode* condition, ASTNode* thenBranch, ASTNode* elseBranch = nullptr)
 		: condition(condition), thenBranch(thenBranch), elseBranch(elseBranch) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	~IfNode() override;
 };
@@ -215,7 +213,7 @@ struct WhileNode : public ASTNode {
 
 	explicit WhileNode(ASTNode* condition, ASTNode* body) : condition(condition), body(body) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	~WhileNode() override;
 };
@@ -229,7 +227,8 @@ struct BinaryOpNode : public ASTNode {
 	explicit BinaryOpNode(TokenType op, ASTNode* left, ASTNode* right)
 		: op(op), left(left), right(right) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
+
 	~BinaryOpNode() override;
 };
 
@@ -240,7 +239,7 @@ struct UnaryOpNode : public ASTNode {
 
 	explicit UnaryOpNode(TokenType op, ASTNode* operand) : op(op), operand(operand) {}
 
-	double evaluate(Environment& env) const override;
+	VariableValue evaluate(Environment& env) const override;
 
 	~UnaryOpNode() override;
 };
