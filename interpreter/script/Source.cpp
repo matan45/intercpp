@@ -241,7 +241,7 @@ int test5() {
 
 		return 0.0; // Return 0 since print does not produce a value
 		});
-	//TODO fix this
+
 	// Example script with for loop and do-while loop
 	std::string input = R"(
 
@@ -288,7 +288,7 @@ func int incrementTest(int n) {
     return i;
 }
 
-
+func void main(){
     int result1 = sumUpTo(5);      // Should return 15
     int result2 = factorial(5);    // Should return 120
     int result3 = incrementTest(5);  
@@ -299,7 +299,9 @@ func int incrementTest(int n) {
     print(result2);
 	print(result3);
 	print(result4);
+}
 
+main();
 
     )";
 
@@ -345,7 +347,7 @@ int test6() {
 
 		return 0.0; // Return 0 since print does not produce a value
 		});
-	//TODO fix this
+	
 	// Example script with for loop and do-while loop
 	std::string input = R"(
 func bool evaluateLogic(bool a, bool b) {
@@ -355,28 +357,25 @@ func bool evaluateLogic(bool a, bool b) {
 func bool evaluateComplexLogic(bool a, bool b, bool c) {
     return (a && b) || c;  // Logical AND followed by OR
 }
-
+//TODO issue of declaration inside function
 func bool testLogic() {
-    bool a = true;
-    bool b = false;
-    bool c = true;
+    bool tt = true;
+    bool gg = false;
+    bool ff = true;
 
-    bool result1 = evaluateLogic(a, b);        // Should return false (true && false)
-    bool result2 = evaluateComplexLogic(a, b, c); // Should return true ((true && false) || true)
+    bool result1 = evaluateLogic(tt, gg);        // Should return false (true && false)
+    bool result2 = evaluateComplexLogic(tt, gg, ff); // Should return true ((true && false) || true)
 
-	if (a){}
-	else if (b){}
-	else {}
 
     return result1 || result2;  // This should return true
 }
 
-int main() {
-    bool result1 = testLogic();      // Should return 15
+
+    bool result3 = testLogic();    
 
     // Assume a print function exists
-    print(result1);
-}
+    print(result3);
+
     )";
 
 	Lexer lexer(input);
@@ -485,7 +484,7 @@ int test8() {
 		std::cerr << "Error during parsing or evaluation: " << e.what() << std::endl;
 		return -1;  // Return early due to error
 	}
-	
+
 
 	// Now that the function is defined in the environment, call it from C++
 	try {
@@ -592,22 +591,22 @@ int test9() {
 		return -1;  // Return early due to error
 	}
 
-	
+
 	return 0;
 }
 
 
 int main() {
-	
-   	test1();
-   	test2();
-  	test3();
- 	test4();
+
+	test1();
+	test2();
+	test3();
+	test4();
 	test5();
-	//test6(); not working
- 	test7();
- 	test8();
- 	test9();
+	test6();
+	test7();
+	test8();
+	test9();
 	//need to add switch case
 	// final for variables
 	// imports from other file

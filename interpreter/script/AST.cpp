@@ -53,7 +53,7 @@ ForNode::~ForNode() {
 
 VariableValue BooleanNode::evaluate(Environment& env) const {
 	// Return 1.0 for true, 0.0 for false (to allow compatibility in numeric contexts)
-	return value ? 1.0 : 0.0;
+	return value;
 }
 
 VariableValue StringNode::evaluate(Environment& env) const {
@@ -330,27 +330,9 @@ VariableValue FunctionCallNode::evaluate(Environment& env) const {
 	}
 
 	// Call the function with the arguments and return the result
-	return env.evaluateFunction(name, evaluatedArgs);
-}
+	VariableValue result = env.evaluateFunction(name, evaluatedArgs);
 
-
-
-VariableValue FunctionCallNode::evaluateArg(ASTNode* arg, Environment& env) const {
-	// Handle different types of nodes and evaluate them.
-	if (auto varNode = dynamic_cast<VariableNode*>(arg)) {
-		return env.getVariable(varNode->name);
-	}
-	else if (auto numNode = dynamic_cast<NumberNode*>(arg)) {
-		return numNode->evaluate(env); // Returns double directly.
-	}
-	else if (auto strNode = dynamic_cast<StringNode*>(arg)) {
-		return strNode->value; // Return the string value directly.
-	}
-	else if (auto unaryNode = dynamic_cast<UnaryOpNode*>(arg)) {
-		return unaryNode->evaluate(env); // Handle unary operations like NOT.
-	}
-
-	throw std::runtime_error("Unsupported node type in evaluateArg");
+	return result;
 }
 
 
@@ -371,62 +353,37 @@ FunctionNode::~FunctionNode() {
 }
 
 VariableValue DeclarationNode::evaluate(Environment& env) const {
-	// Declare the variable in the environment with its type
-	env.declareVariable(variableName, type);
+	// Declare the variable in the current scope with a default value
+	ValueType defaultType;
+
+	// Set the default value depending on the type
+	switch (type) {
+	case ValueType::BOOL:
+		defaultType = ValueType::BOOL;  // Boolean variables default to false
+		break;
+	case ValueType::INT:
+		defaultType = ValueType::INT;  // Int variables default to 0 (use double to store numeric)
+		break;
+	case ValueType::FLOAT:
+		defaultType = ValueType::FLOAT;  // Float variables also default to 0
+		break;
+	case ValueType::STRING:
+		defaultType = ValueType::STRING;  // Strings default to empty
+		break;
+	default:
+		throw std::runtime_error("Unknown type for variable declaration: " + variableName);
+	}
+
+	// Declare the variable in the environment
+	env.declareVariable(variableName, defaultType);
 
 	// If there is an initializer, evaluate it and set the value in the environment
 	if (initializer) {
-		VariableValue evaluatedValue = initializer->evaluate(env);
-		VariableValue value;
-
-		switch (type) {
-		case ValueType::INT: 
-		case ValueType::FLOAT: {
-			// Ensure that the evaluated value is a number
-			if (auto doublePtr = std::get_if<double>(&evaluatedValue)) {
-				value = *doublePtr;
-				std::cout << "DeclarationNode: Initializing float variable " << variableName << " with value " << *doublePtr << std::endl;
-			}
-			else {
-				throw std::runtime_error("Type error: Expected numeric value for float variable " + variableName);
-			}
-			break;
-		}
-		case ValueType::BOOL: {
-			// Ensure the value is convertible to a boolean
-			if (auto doublePtr = std::get_if<double>(&evaluatedValue)) {
-				value = (*doublePtr != 0);  // Non-zero values are considered true
-				std::cout << "DeclarationNode: Initializing boolean variable " << variableName << " with value " << ((*doublePtr != 0) ? "true" : "false") << std::endl;
-			}
-			else if (auto boolPtr = std::get_if<bool>(&evaluatedValue)) {
-				value = *boolPtr;
-			}
-			else {
-				throw std::runtime_error("Type error: Expected numeric or boolean value for boolean variable " + variableName);
-			}
-			break;
-		}
-		case ValueType::STRING: {
-			// Ensure the initializer can be interpreted as a string
-			if (auto strPtr = std::get_if<std::string>(&evaluatedValue)) {
-				value = *strPtr;
-				std::cout << "DeclarationNode: Initializing string variable " << variableName << " with value \"" << *strPtr << "\"" << std::endl;
-			}
-			else {
-				throw std::runtime_error("Type error: Expected string initializer for variable " + variableName);
-			}
-			break;
-		}
-		default:
-			throw std::runtime_error("Unknown value type for variable " + variableName);
-		}
-
-		// Set the value in the environment
+		VariableValue value = initializer->evaluate(env);
 		env.setVariable(variableName, value);
 	}
 
-	// If there's no initializer, the default value (already set during declaration) is used
-	return env.getVariable(variableName);  // Return the current value of the variable
+	return env.getVariable(variableName);  // Return the value of the declared variable
 }
 
 DeclarationNode::~DeclarationNode() {
@@ -471,7 +428,7 @@ VariableValue VariableNode::evaluate(Environment& env) const {
 	else if (std::holds_alternative<bool>(value)) {
 		bool boolValue = std::get<bool>(value);
 		std::cout << "VariableNode: Retrieved boolean value " << (boolValue ? "true" : "false") << " for variable " << name << std::endl;
-		return boolValue ? 1.0 : 0.0;
+		return boolValue;
 	}
 	// Handle string type: return a default value or throw an error
 	else if (std::holds_alternative<std::string>(value)) {

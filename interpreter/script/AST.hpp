@@ -176,8 +176,6 @@ struct FunctionCallNode : public ASTNode {
 
 	VariableValue evaluate(Environment& env) const override;
 
-	VariableValue evaluateArg(ASTNode* arg, Environment& env) const;
-
 	~FunctionCallNode() override;
 };
 

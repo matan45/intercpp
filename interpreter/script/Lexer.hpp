@@ -42,7 +42,8 @@ private:
 		{"bool", TokenType::BOOL},
 		{"string", TokenType::STRING_TYPE},
 		{"true", TokenType::TRUE},
-		{"false", TokenType::FALSE}
+		{"false", TokenType::FALSE},
+		{"void", TokenType::VOID_TYPE}
 	};
 
 public:

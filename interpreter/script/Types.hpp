@@ -16,7 +16,7 @@ enum class TokenType {
 	EQUALS, NOT_EQUALS, // ==, !=
 	LESS, LESS_EQUALS, GREATER, GREATER_EQUALS, // <, <=, >, >=
 	FUNC, RETURN, IF, ELSE, WHILE, FOR, // Keywords
-	INT, FLOAT, BOOL, STRING_TYPE, // Data types
+	INT, FLOAT, BOOL,VOID_TYPE, STRING_TYPE, // Data types
 	TRUE, FALSE, DO,
 	PLUSPLUS, MINUSMINUS,
 	END // End of input
@@ -32,6 +32,7 @@ enum class ValueType {
 	INT,
 	FLOAT,
 	BOOL,
+	VOID_TYPE,
 	STRING
 };
 

@@ -482,6 +482,10 @@ ValueType Parser::parseType() {
 		eat(TokenType::STRING_TYPE);
 		return ValueType::STRING;
 	}
+	else if (currentToken.type == TokenType::VOID_TYPE) {
+		eat(TokenType::VOID_TYPE);
+		return ValueType::VOID_TYPE;
+	}
 
 	throw std::runtime_error("Expected type declaration");
 }

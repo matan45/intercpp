@@ -54,6 +54,9 @@ Token Lexer::getNextToken() {
 			if (word == "int") {
 				return Token(TokenType::INT);
 			}
+			if (word == "void") {
+				return Token(TokenType::VOID_TYPE);
+			}
 			else if (word == "float") {
 				return Token(TokenType::FLOAT);
 			}
