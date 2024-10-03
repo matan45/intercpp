@@ -106,7 +106,7 @@ struct DeclarationNode : public ASTNode {
 	ASTNode* initializer;
 
 	explicit DeclarationNode(const std::string& variableName, ValueType type, ASTNode* initializer = nullptr)
-		: type(type), variableName(variableName), initializer(initializer)  {}
+		: variableName(variableName), type(type), initializer(initializer)  {}
 
 	double evaluate(Environment& env) const override;
 
@@ -163,6 +163,8 @@ struct FunctionCallNode : public ASTNode {
 		: name(name), arguments(arguments) {}
 
 	double evaluate(Environment& env) const override;
+
+	VariableValue evaluateArg(ASTNode* arg, Environment& env) const;
 
 	~FunctionCallNode() override;
 };

@@ -166,46 +166,70 @@ ReturnNode::~ReturnNode() {
 	delete returnValue;
 }
 
-double FunctionCallNode::evaluate(Environment& env) const  {
+double FunctionCallNode::evaluate(Environment& env) const {
 	if (name == "print") {
+		// Handle the native "print" function
 		if (arguments.size() != 1) {
 			throw std::runtime_error("print expects 1 argument");
 		}
 
 		ASTNode* arg = arguments[0];
+		VariableValue value;
 
-		// Handle variable node
+		// Try evaluating the argument to get its value.
 		if (auto varNode = dynamic_cast<VariableNode*>(arg)) {
-			auto value = env.getVariable(varNode->name);
-			if (std::holds_alternative<double>(value)) {
-				std::cout << "Print from script: " << std::get<double>(value) << std::endl;
-			}
-			else if (std::holds_alternative<std::string>(value)) {
-				std::cout << "Print from script: " << std::get<std::string>(value) << std::endl;
-			}
-			else if (std::holds_alternative<bool>(value)) {
-				std::cout << "Print from script: " << (std::get<bool>(value) ? "true" : "false") << std::endl;
-			}
-			else {
-				throw std::runtime_error("Unsupported type for print function");
-			}
+			// If it's a variable node, get the value from the environment.
+			value = env.getVariable(varNode->name);
 		}
-		// Handle direct number or string nodes
-		else if (auto numNode = dynamic_cast<NumberNode*>(arg)) {
-			std::cout << "Print from script: " << numNode->value << std::endl;
+		else {
+			// If it's not a variable node, directly evaluate it.
+			value = evaluateArg(arg, env);
 		}
-		else if (auto strNode = dynamic_cast<StringNode*>(arg)) {
-			std::cout << "Print from script: " << strNode->value << std::endl;
+
+		// Output the value based on its type.
+		if (std::holds_alternative<double>(value)) {
+			std::cout << "Print from script: " << std::get<double>(value) << std::endl;
+		}
+		else if (std::holds_alternative<std::string>(value)) {
+			std::cout << "Print from script: " << std::get<std::string>(value) << std::endl;
+		}
+		else if (std::holds_alternative<bool>(value)) {
+			std::cout << "Print from script: " << (std::get<bool>(value) ? "true" : "false") << std::endl;
 		}
 		else {
 			throw std::runtime_error("Unsupported type for print function");
 		}
+
+		return 0;  // `print` does not return a value
 	}
 	else {
-		throw std::runtime_error("Undefined function: " + name);
+		// Handle other user-defined functions.
+		std::vector<double> evaluatedArgs;
+		for (ASTNode const* arg : arguments) {
+			evaluatedArgs.push_back(arg->evaluate(env));
+		}
+
+		return env.evaluateFunction(name, evaluatedArgs);
+	}
+}
+
+
+VariableValue FunctionCallNode::evaluateArg(ASTNode* arg, Environment& env) const {
+	// Handle different types of nodes and evaluate them
+	if (auto varNode = dynamic_cast<VariableNode*>(arg)) {
+		return env.getVariable(varNode->name);
+	}
+	else if (auto numNode = dynamic_cast<NumberNode*>(arg)) {
+		return numNode->evaluate(env); // Returns double directly
+	}
+	else if (auto strNode = dynamic_cast<StringNode*>(arg)) {
+		return strNode->evaluateString(env); // Returns the string value
+	}
+	else if (auto boolNode = dynamic_cast<UnaryOpNode*>(arg)) {
+		return boolNode->evaluate(env); // Handle booleans or unary operations like NOT
 	}
 
-	return 0; // Function calls like print do not return values
+	throw std::runtime_error("Unsupported node type in evaluateArg");
 }
 
 FunctionCallNode::~FunctionCallNode() {
@@ -216,7 +240,8 @@ FunctionCallNode::~FunctionCallNode() {
 
 double FunctionNode::evaluate(Environment& env) const  {
 	// FunctionNode itself is not "evaluated"; it's stored in the environment
-	throw std::runtime_error("FunctionNode cannot be directly evaluated.");
+	//throw std::runtime_error("FunctionNode cannot be directly evaluated.");
+	return 0;
 }
 
 FunctionNode::~FunctionNode() {

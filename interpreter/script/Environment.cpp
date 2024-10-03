@@ -19,13 +19,37 @@ void Environment::registerUserFunction(const std::string& name, ASTNode* functio
 
 // Evaluate a function by name with given arguments
 double Environment::evaluateFunction(const std::string& name, const std::vector<double>& args) const {
+	// Check if the function is a C++ native function
 	if (functionRegistry.contains(name)) {
 		return functionRegistry.at(name)(args);
 	}
 
+	// Check if the function is a user-defined function
 	if (userFunctionRegistry.contains(name)) {
-		ASTNode const* functionNode = userFunctionRegistry.at(name);
-		return functionNode->evaluate(*const_cast<Environment*>(this));
+		auto* functionNode = dynamic_cast<FunctionNode*>(userFunctionRegistry.at(name));
+		if (!functionNode) {
+			throw std::runtime_error("Function " + name + " is not properly defined.");
+		}
+
+		// Check if the number of arguments matches the number of parameters
+		if (args.size() != functionNode->parameters.size()) {
+			throw std::runtime_error("Function " + name + " expects " +
+				std::to_string(functionNode->parameters.size()) +
+				" arguments, but got " + std::to_string(args.size()));
+		}
+
+		// Create a temporary environment for the function call
+		Environment functionEnv(*this); // Copy the current environment for local scope
+
+		// Assign arguments to the parameters
+		for (size_t i = 0; i < args.size(); ++i) {
+			const auto& param = functionNode->parameters[i];
+			functionEnv.declareVariable(param.first, param.second);
+			functionEnv.setVariable(param.first, args[i]);
+		}
+
+		// Evaluate the function body
+		return functionNode->body->evaluate(functionEnv);
 	}
 
 	throw std::runtime_error("Undefined function: " + name);

@@ -188,8 +188,9 @@ ASTNode* Parser::parseDeclaration() {
 		eat(TokenType::ASSIGN);
 		initializer = parseExpression();
 	}
-
-	eat(TokenType::SEMICOLON);
+	if (currentToken.type == TokenType::SEMICOLON) {
+		eat(TokenType::SEMICOLON);
+	}
 	return new DeclarationNode(variableName, type, initializer);
 }
 
