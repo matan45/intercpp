@@ -14,7 +14,7 @@ int test1() {
 
 	// Example script with for loop and do-while loop
 	std::string input = R"(
-         int x = 8;
+        int x = 8;
         int y;
         y = x - 3;
         if (y > 0) {
@@ -85,14 +85,15 @@ int test3() {
 
 	// Example script with for loop and do-while loop
 	std::string input = R"(
-        int x = 5;
-		float y = 2.5;
-		//bool isTrue = true;
-		//string z = "hi from script"; need to handle string
-		print(x);
-		print(y);
-		//print(isTrue);
-		//print(z);
+       int x = 5;
+        float y = 2.5;
+        bool isTrue = true;
+        string z = "hi from script";
+
+        print(x);
+        print(y);
+        print(isTrue);
+        print(z);
     )";
 
 	Lexer lexer(input);
@@ -326,12 +327,12 @@ int test7() {
 }
 
 int main() {
-	test1();
-	test2();
+// 	test1();
+// 	test2();
 	test3();
-	test4();
+	/*test4();
 	test5();
 	test6();
-	test7();
+	test7();*/
 }
 

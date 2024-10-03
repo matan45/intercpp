@@ -9,11 +9,15 @@
 #include <string>
 #include <iostream>
 #include <stdexcept>
+#include <utility>     // For std::make_pair
 
 #include "Lexer.hpp"
+#include <variant>
 
 // Define the type of function signature used for callable functions
 using ScriptFunction = std::function<double(const std::vector<double>&)>;
+using VariableValue = std::variant<double, bool, std::string>;
+
 
 // Define supported value types
 enum class ValueType {
@@ -33,11 +37,11 @@ struct ASTNode {
 // The Environment class to manage functions and variables
 class Environment {
 public:
-	Environment() {}
+	Environment() = default;
 
 	// Register a built-in C++ function by name
 	void registerFunction(const std::string& name, ScriptFunction func) {
-		if (functionRegistry.find(name) != functionRegistry.end()) {
+		if (functionRegistry.contains(name)) {
 			throw std::runtime_error("Function already registered: " + name);
 		}
 		functionRegistry[name] = func;
@@ -45,7 +49,7 @@ public:
 
 	// Register a user-defined function (AST-based)
 	void registerUserFunction(const std::string& name, ASTNode* functionNode) {
-		if (userFunctionRegistry.find(name) != userFunctionRegistry.end()) {
+		if (userFunctionRegistry.contains(name)) {
 			throw std::runtime_error("User-defined function already registered: " + name);
 		}
 		userFunctionRegistry[name] = functionNode;
@@ -53,15 +57,12 @@ public:
 
 	// Evaluate a function by name with given arguments
 	double evaluateFunction(const std::string& name, const std::vector<double>& args) const {
-		// Check if the function is a C++ native function
-		if (functionRegistry.find(name) != functionRegistry.end()) {
+		if (functionRegistry.contains(name)) {
 			return functionRegistry.at(name)(args);
 		}
 
-		// Check if the function is a user-defined function
-		if (userFunctionRegistry.find(name) != userFunctionRegistry.end()) {
-			// Assuming ASTNode supports a context to manage arguments for user functions
-			ASTNode* functionNode = userFunctionRegistry.at(name);
+		if (userFunctionRegistry.contains(name)) {
+			ASTNode const* functionNode = userFunctionRegistry.at(name);
 			return functionNode->evaluate(*const_cast<Environment*>(this));
 		}
 
@@ -70,15 +71,28 @@ public:
 
 	// Declare a variable by name and type
 	void declareVariable(const std::string& name, ValueType type) {
-		if (variableTable.find(name) != variableTable.end()) {
+		if (variableTable.contains(name)) {
 			throw std::runtime_error("Variable already declared: " + name);
 		}
-		variableTable[name] = { 0, type };  // Initialize with default value 0
+		switch (type) {
+		case ValueType::INT:
+		case ValueType::FLOAT:
+			// Initialize numeric types to 0
+			variableTable[name] = std::make_pair(0.0, type);
+			break;
+		case ValueType::BOOL:
+			// Initialize boolean to false
+			variableTable[name] = std::make_pair(false, type);
+			break;
+		case ValueType::STRING:
+			// Initialize string to an empty string
+			variableTable[name] = std::make_pair(std::string(""), type);
+			break;
+		}
 	}
 
-	// Set a variable's value
-	void setVariable(const std::string& name, double value) {
-		if (variableTable.find(name) == variableTable.end()) {
+	void setVariable(const std::string& name, const VariableValue& value) {
+		if (!variableTable.contains(name)) {
 			throw std::runtime_error("Undefined variable: " + name);
 		}
 
@@ -86,32 +100,46 @@ public:
 
 		// Perform type checks to ensure correctness
 		if (type == ValueType::INT) {
-			if (value != static_cast<int>(value)) {
+			if (!std::holds_alternative<double>(value) ||
+				std::get<double>(value) != static_cast<int>(std::get<double>(value))) {
 				throw std::runtime_error("Type error: Expected int value for variable " + name);
+			}
+		}
+		else if (type == ValueType::FLOAT) {
+			if (!std::holds_alternative<double>(value)) {
+				throw std::runtime_error("Type error: Expected float value for variable " + name);
+			}
+		}
+		else if (type == ValueType::BOOL) {
+			if (!std::holds_alternative<bool>(value)) {
+				throw std::runtime_error("Type error: Expected boolean value for variable " + name);
+			}
+		}
+		else if (type == ValueType::STRING) {
+			if (!std::holds_alternative<std::string>(value)) {
+				throw std::runtime_error("Type error: Expected string value for variable " + name);
 			}
 		}
 
 		// Assign the value to the variable
 		variableTable[name].first = value;
+		std::cout << "Environment: Updated variable " << name << " to new value." << std::endl;
 	}
 
+
+
 	// Get a variable's value
-	double getVariable(const std::string& name) const {
-		if (variableTable.find(name) == variableTable.end()) {
+	VariableValue getVariable(const std::string& name) const {
+		if (!variableTable.contains(name)) {
 			throw std::runtime_error("Undefined variable: " + name);
 		}
 		return variableTable.at(name).first;
 	}
 
 private:
-	// Registry for native C++ functions
 	std::unordered_map<std::string, ScriptFunction> functionRegistry;
-
-	// Registry for user-defined functions
 	std::unordered_map<std::string, ASTNode*> userFunctionRegistry;
-
-	// Table for managing variables (name -> (value, type))
-	std::unordered_map<std::string, std::pair<double, ValueType>> variableTable;
+	std::unordered_map<std::string, std::pair<VariableValue, ValueType>> variableTable;
 };
 
 
@@ -123,13 +151,13 @@ struct ProgramNode : public ASTNode {
 	ProgramNode(const std::vector<ASTNode*>& statements) : statements(statements) {}
 
 	double evaluate(Environment& env) const override {
-		for (ASTNode* statement : statements) {
+		for (ASTNode const* statement : statements) {
 			statement->evaluate(env);
 		}
 		return 0; // Program as a whole doesn’t return a specific value
 	}
 
-	~ProgramNode() {
+	~ProgramNode() override {
 		for (ASTNode* statement : statements) {
 			delete statement;
 		}
@@ -169,6 +197,38 @@ struct ForNode : public ASTNode {
 		delete body;
 	}
 };
+
+struct BooleanNode : public ASTNode {
+	bool value;
+
+	BooleanNode(bool value) : value(value) {}
+
+	double evaluate(Environment& env) const override {
+		// Return 1.0 for true, 0.0 for false (to allow compatibility in numeric contexts)
+		return value ? 1.0 : 0.0;
+	}
+
+	bool evaluateBool(Environment& env) const {
+		return value;
+	}
+};
+
+
+struct StringNode : public ASTNode {
+	std::string value;
+
+	StringNode(const std::string& value) : value(value) {}
+
+	double evaluate(Environment& env) const override {
+		// This method returns 0 as this is primarily for printing purposes.
+		return 0;
+	}
+
+	std::string evaluateString(Environment& env) const {
+		return value;
+	}
+};
+
 
 struct DoWhileNode : public ASTNode {
 	ASTNode* body;        // Loop body
@@ -212,6 +272,41 @@ struct BlockNode : public ASTNode {
 	}
 };
 
+// Variable Node: Represents a reference to a variable
+struct VariableNode : public ASTNode {
+	std::string name;
+
+	VariableNode(const std::string& name) : name(name) {}
+
+	double evaluate(Environment& env) const override {
+		auto value = env.getVariable(name);
+		if (std::holds_alternative<double>(value)) {
+			double numValue = std::get<double>(value);
+			std::cout << "VariableNode: Retrieved numeric value " << numValue << " for variable " << name << std::endl;
+			return numValue;
+		}
+		else if (std::holds_alternative<bool>(value)) {
+			bool boolValue = std::get<bool>(value);
+			std::cout << "VariableNode: Retrieved boolean value " << (boolValue ? "true" : "false") << " for variable " << name << std::endl;
+			return boolValue ? 1.0 : 0.0;
+		}
+		// Handle string type: return a default value or throw an error
+		else if (std::holds_alternative<std::string>(value)) {
+			std::string strValue = std::get<std::string>(value);
+			std::cout << "VariableNode: Retrieved string value \"" << strValue << "\" for variable " << name << std::endl;
+			// Option 1: Return a default value such as 0.0
+			return 0.0;
+
+			// Option 2: Throw an error if evaluating a string as a double is not allowed
+			// throw std::runtime_error("Cannot evaluate a string value as a double for variable: " + name);
+		}
+		else {
+			throw std::runtime_error("Expected numeric value for variable: " + name);
+		}
+	}
+
+};
+
 // Declaration Node: Represents a variable declaration, possibly with an initializer
 struct DeclarationNode : public ASTNode {
 	std::string variableName;
@@ -219,12 +314,47 @@ struct DeclarationNode : public ASTNode {
 	ASTNode* initializer;
 
 	DeclarationNode(const std::string& variableName, ValueType type, ASTNode* initializer = nullptr)
-		: variableName(variableName), type(type), initializer(initializer) {}
+		: type(type), initializer(initializer), variableName(variableName) {}
 
 	double evaluate(Environment& env) const override {
+		// Declare the variable in the environment
 		env.declareVariable(variableName, type);
+
+		// If there is an initializer, evaluate it and set the value in the environment
 		if (initializer) {
-			double value = initializer->evaluate(env);
+			VariableValue value;
+
+			switch (type) {
+			case ValueType::INT:
+			case ValueType::FLOAT: {
+				double evaluatedValue = initializer->evaluate(env);
+				value = evaluatedValue;
+				std::cout << "DeclarationNode: Initializing variable " << variableName << " with value " << evaluatedValue << std::endl;
+				break;
+			}
+			case ValueType::BOOL: {
+				bool evaluatedValue = initializer->evaluate(env) != 0;
+				value = evaluatedValue;
+				std::cout << "DeclarationNode: Initializing boolean variable " << variableName << " with value " << (evaluatedValue ? "true" : "false") << std::endl;
+				break;
+			}
+			case ValueType::STRING: {
+				// Assuming the initializer can be evaluated to a string
+				auto strNode = dynamic_cast<StringNode*>(initializer);
+				if (strNode) {
+					value = strNode->evaluateString(env);
+					std::cout << "DeclarationNode: Initializing string variable " << variableName << " with value \"" << std::get<std::string>(value) << "\"" << std::endl;
+				}
+				else {
+					throw std::runtime_error("Type error: Expected string initializer for variable " + variableName);
+				}
+				break;
+			}
+			default:
+				throw std::runtime_error("Unknown value type for variable " + variableName);
+			}
+
+			// Set the value in the environment
 			env.setVariable(variableName, value);
 		}
 		return 0;
@@ -245,6 +375,7 @@ struct AssignmentNode : public ASTNode {
 
 	double evaluate(Environment& env) const override {
 		double value = expression->evaluate(env);
+		std::cout << "AssignmentNode: Assigning value " << value << " to variable " << variableName << std::endl;
 		env.setVariable(variableName, value);
 		return value;
 	}
@@ -254,16 +385,6 @@ struct AssignmentNode : public ASTNode {
 	}
 };
 
-// Variable Node: Represents a reference to a variable
-struct VariableNode : public ASTNode {
-	std::string name;
-
-	VariableNode(const std::string& name) : name(name) {}
-
-	double evaluate(Environment& env) const override {
-		return env.getVariable(name);
-	}
-};
 
 // Number Node: Represents a numerical literal
 struct NumberNode : public ASTNode {
@@ -306,11 +427,45 @@ struct FunctionCallNode : public ASTNode {
 		: name(name), arguments(arguments) {}
 
 	double evaluate(Environment& env) const override {
-		std::vector<double> argValues;
-		for (ASTNode* arg : arguments) {
-			argValues.push_back(arg->evaluate(env));
+		if (name == "print") {
+			if (arguments.size() != 1) {
+				throw std::runtime_error("print expects 1 argument");
+			}
+
+			ASTNode* arg = arguments[0];
+
+			// Handle variable node
+			if (auto varNode = dynamic_cast<VariableNode*>(arg)) {
+				auto value = env.getVariable(varNode->name);
+				if (std::holds_alternative<double>(value)) {
+					std::cout << "Print from script: " << std::get<double>(value) << std::endl;
+				}
+				else if (std::holds_alternative<std::string>(value)) {
+					std::cout << "Print from script: " << std::get<std::string>(value) << std::endl;
+				}
+				else if (std::holds_alternative<bool>(value)) {
+					std::cout << "Print from script: " << (std::get<bool>(value) ? "true" : "false") << std::endl;
+				}
+				else {
+					throw std::runtime_error("Unsupported type for print function");
+				}
+			}
+			// Handle direct number or string nodes
+			else if (auto numNode = dynamic_cast<NumberNode*>(arg)) {
+				std::cout << "Print from script: " << numNode->value << std::endl;
+			}
+			else if (auto strNode = dynamic_cast<StringNode*>(arg)) {
+				std::cout << "Print from script: " << strNode->value << std::endl;
+			}
+			else {
+				throw std::runtime_error("Unsupported type for print function");
+			}
 		}
-		return env.evaluateFunction(name, argValues);
+		else {
+			throw std::runtime_error("Undefined function: " + name);
+		}
+
+		return 0; // Function calls like print do not return values
 	}
 
 	~FunctionCallNode() {
@@ -346,6 +501,7 @@ struct IfNode : public ASTNode {
 
 	double evaluate(Environment& env) const override {
 		double conditionValue = condition->evaluate(env);
+		std::cout << "IfNode: conditionValue" << conditionValue << std::endl;
 		if (conditionValue != 0) {
 			return thenBranch->evaluate(env);
 		}
