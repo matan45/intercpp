@@ -1,4 +1,7 @@
 #include "Parser.hpp"
+#include "Types.hpp"
+#include "Environment.hpp"
+#include "Lexer.hpp"
 
 int test1() {
 	Environment env;
@@ -327,8 +330,8 @@ int test7() {
 }
 
 int main() {
-// 	test1();
-// 	test2();
+ 	test1();
+ 	test2();
 	test3();
 	/*test4();
 	test5();

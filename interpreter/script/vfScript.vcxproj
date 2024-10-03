@@ -11,6 +11,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AST.cpp" />
+    <ClCompile Include="Environment.cpp" />
     <ClCompile Include="Lexer.cpp" />
     <ClCompile Include="Parser.cpp" />
     <ClCompile Include="Source.cpp" />
@@ -20,6 +22,7 @@
     <ClInclude Include="Environment.hpp" />
     <ClInclude Include="Lexer.hpp" />
     <ClInclude Include="Parser.hpp" />
+    <ClInclude Include="Types.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{76959BD6-6262-F6E1-8B7B-E48977A72B70}</ProjectGuid>

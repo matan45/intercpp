@@ -1,4 +1,6 @@
 #include "Parser.hpp"
+#include "Types.hpp"
+#include "Environment.hpp"
 
 void Parser::eat(TokenType type) {
 	if (currentToken.type == type) {
