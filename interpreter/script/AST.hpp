@@ -106,7 +106,7 @@ struct DeclarationNode : public ASTNode {
 	ASTNode* initializer;
 
 	explicit DeclarationNode(const std::string& variableName, ValueType type, ASTNode* initializer = nullptr)
-		: variableName(variableName), type(type), initializer(initializer)  {}
+		: variableName(variableName), type(type), initializer(initializer) {}
 
 	double evaluate(Environment& env) const override;
 
@@ -131,11 +131,13 @@ struct AssignmentNode : public ASTNode {
 struct NumberNode : public ASTNode {
 	double value;
 
-	NumberNode(double value) : value(value) {}
+	explicit NumberNode(double value) : value(value) {}
 
 	double evaluate(Environment& env) const override {
 		return value;
 	}
+
+	~NumberNode() override = default;
 };
 
 // Function Definition Node: Represents a user-defined function

@@ -125,7 +125,7 @@ int test4() {
 		std::cout << "Print from script: " << args[0] << std::endl;
 		return 0;
 		});
-	//TODO fix this
+
 	// Example script with for loop and do-while loop
 	std::string input = R"(
        func int add(int a, int b) {
@@ -329,14 +329,118 @@ int test7() {
 	return 0;
 }
 
-int main() {
 
- 	test1();
- 	test2();
-	test3();
+int test8() {
+	Environment env;
+
+	// Example script with for loop and do-while loop, which also includes a function definition.
+	std::string input = R"(
+        func int multiply(int a, int b) {
+            return a * b;
+        }
+    )";
+
+	// Create Lexer and Parser
+	Lexer lexer(input);
+	Parser parser(lexer, env);
+
+	// Parse the script and register the function
+	ASTNode* root{ nullptr };
+	try {
+		root = parser.parse();
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error during parsing or evaluation: " << e.what() << std::endl;
+		return -1;  // Return early due to error
+	}
+
+	//run the program
+	try {
+		root->evaluate(env);  // This will register the function "multiply" in the environment
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error during parsing or evaluation: " << e.what() << std::endl;
+		return -1;  // Return early due to error
+	}
+	
+
+	// Now that the function is defined in the environment, call it from C++
+	try {
+		// Arguments to pass to the function
+		std::vector<double> args = { 5, 10 };
+
+		// Evaluate the function in the script environment
+		double result = env.evaluateFunction("multiply", args);
+
+		std::cout << "Result of multiply(5, 10): " << result << std::endl;
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error during function call: " << e.what() << std::endl;
+	}
+
+	delete root;
+	return 0;
+}
+
+double addNumbers(const std::vector<double>& args) {
+	if (args.size() != 2) {
+		throw std::runtime_error("addNumbers expects exactly 2 arguments.");
+	}
+	return args[0] + args[1];
+}
+
+int test9() {
+	Environment env;
+
+	// Register a built-in print function
+	env.registerFunction("print", [](const std::vector<double>& args) -> double {
+		if (args.size() != 1) {
+			throw std::runtime_error("print expects 1 argument");
+		}
+		std::cout << "Print from script: " << args[0] << std::endl;
+		return 0;
+		});
+
+	// Register the C++ function addNumbers into the environment
+	env.registerFunction("addNumbers", addNumbers);
+
+	// Example script with for loop and do-while loop, which also includes a function definition.
+	std::string input = R"(
+         int result = addNumbers(7, 8);
+		 print(result);
+    )";
+
+	// Create Lexer and Parser
+	Lexer lexer(input);
+	Parser parser(lexer, env);
+
+	// Parse the script and register the function
+	ASTNode* root{ nullptr };
+	try {
+		root = parser.parse();
+		root->evaluate(env);
+		delete root;
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error during parsing or evaluation: " << e.what() << std::endl;
+		return -1;  // Return early due to error
+	}
+
+	
+	return 0;
+}
+
+
+int main() {
+	
+  	test1();
+  	test2();
+ 	test3();
 	test4();
 	/**test5();
 	test6();
 	test7();*/
+	test8();
+	test9();
 }
 
