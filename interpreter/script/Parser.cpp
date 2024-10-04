@@ -28,7 +28,9 @@ ASTNode* Parser::parseStatement() {
 	else if (currentToken.type == TokenType::INT ||
 		currentToken.type == TokenType::FLOAT ||
 		currentToken.type == TokenType::BOOL ||
-		currentToken.type == TokenType::STRING_TYPE) {
+		currentToken.type == TokenType::STRING_TYPE ||
+		currentToken.type == TokenType::ARRAY ||
+		currentToken.type == TokenType::MAP) {
 		// Variable declaration
 		return parseDeclaration();
 	}
@@ -39,6 +41,21 @@ ASTNode* Parser::parseStatement() {
 		if (currentToken.type == TokenType::ASSIGN) {
 			// Assignment statement
 			return parseAssignment(identifier);
+		}
+		// Handle array or map index assignment (e.g., `arr[2] = 10` or `map["key"] = 20`)
+		else if (currentToken.type == TokenType::LBRACKET) {
+			// Parse array or map indexing (like `arr[2]`)
+			eat(TokenType::LBRACKET);
+			ASTNode* indexExpr = parseExpression();  // Index or key
+			eat(TokenType::RBRACKET);
+
+			// Expect an assignment to this indexed value (e.g., `arr[2] = 10`)
+			if (currentToken.type == TokenType::ASSIGN) {
+				eat(TokenType::ASSIGN);
+				ASTNode* valueExpr = parseExpression();
+				eat(TokenType::SEMICOLON);
+				return new AssignmentNode(identifier, indexExpr, valueExpr);  // AssignmentNode for array/map element assignment
+			}
 		}
 		else if (currentToken.type == TokenType::LPAREN) {
 			// Function call statement
@@ -249,9 +266,22 @@ ASTNode* Parser::parseDeclaration() {
 	eat(TokenType::IDENTIFIER);
 
 	ASTNode* initializer = nullptr;
+	// Handle the initialization part if present
 	if (currentToken.type == TokenType::ASSIGN) {
 		eat(TokenType::ASSIGN);
-		initializer = parseExpression();
+
+		if (type == ValueType::ARRAY) {
+			// Expecting an array literal to initialize the array variable
+			initializer = parseArrayLiteral();
+		}
+		else if (type == ValueType::MAP) {
+			// Expecting a map literal to initialize the map variable
+			initializer = parseMapLiteral();
+		}
+		else {
+			// For scalar variables, parse the normal initializer expression
+			initializer = parseExpression();
+		}
 	}
 	if (currentToken.type == TokenType::SEMICOLON) {
 		eat(TokenType::SEMICOLON);
@@ -481,6 +511,58 @@ ASTNode* Parser::parsePrimary() {
 	}
 }
 
+ASTNode* Parser::parseMapLiteral()
+{
+	eat(TokenType::LBRACE);
+	std::unordered_map<std::string, ASTNode*> elements;
+
+	// Parse key-value pairs
+	while (currentToken.type != TokenType::RBRACE) {
+		ASTNode* keyNode = parseExpression();
+
+		if (auto keyStr = dynamic_cast<StringNode*>(keyNode)) {
+			std::string key = keyStr->value;
+			eat(TokenType::COLON);
+			ASTNode* valueNode = parseExpression();
+			elements[key] = valueNode;
+
+			if (currentToken.type == TokenType::COMMA) {
+				eat(TokenType::COMMA);
+			}
+			else {
+				break;
+			}
+		}
+		else {
+			throw std::runtime_error("Map keys must be strings.");
+		}
+	}
+
+	eat(TokenType::RBRACE);
+	return new MapNode(elements);
+}
+
+ASTNode* Parser::parseArrayLiteral()
+{
+	eat(TokenType::LBRACKET);
+	std::vector<ASTNode*> elements;
+
+	// Parse elements separated by commas
+	while (currentToken.type != TokenType::RBRACKET) {
+		elements.push_back(parseExpression());
+
+		if (currentToken.type == TokenType::COMMA) {
+			eat(TokenType::COMMA);
+		}
+		else {
+			break;
+		}
+	}
+
+	eat(TokenType::RBRACKET);
+	return new ArrayNode(elements);
+}
+
 
 ValueType Parser::parseType() {
 	if (currentToken.type == TokenType::INT) {
@@ -502,6 +584,14 @@ ValueType Parser::parseType() {
 	else if (currentToken.type == TokenType::VOID_TYPE) {
 		eat(TokenType::VOID_TYPE);
 		return ValueType::VOID_TYPE;
+	}
+	else if (currentToken.type == TokenType::ARRAY) {
+		eat(TokenType::ARRAY);
+		return ValueType::ARRAY;
+	}
+	else if (currentToken.type == TokenType::MAP) {
+		eat(TokenType::MAP);
+		return ValueType::MAP;
 	}
 
 	throw std::runtime_error("Expected type declaration");

@@ -126,10 +126,14 @@ struct DeclarationNode : public ASTNode {
 // Assignment Node: Represents assigning a value to a variable
 struct AssignmentNode : public ASTNode {
 	std::string variableName;
+	ASTNode* index;
 	ASTNode* expression;
 
 	explicit AssignmentNode(const std::string& variableName, ASTNode* expression)
-		: variableName(variableName), expression(expression) {}
+		: variableName(variableName), index(nullptr), expression(expression) {}
+
+	explicit AssignmentNode(const std::string& variableName, ASTNode* index, ASTNode* expression)
+		: variableName(variableName), index(index), expression(expression) {}
 
 	VariableValue evaluate(Environment& env) const override;
 
@@ -144,7 +148,7 @@ struct NumberNode : public ASTNode {
 	explicit NumberNode(double value) : value(value) {}
 
 	VariableValue evaluate(Environment& env) const override {
-		return value;
+		return VariableValue(value);
 	}
 
 	~NumberNode() override = default;
@@ -241,4 +245,54 @@ struct UnaryOpNode : public ASTNode {
 
 	~UnaryOpNode() override;
 };
+
+struct ArrayAccessNode : public ASTNode {
+	ASTNode* arrayExpr;  // Expression representing the array
+	ASTNode* indexExpr;  // Expression representing the index
+
+	explicit ArrayAccessNode(ASTNode* arrayExpr, ASTNode* indexExpr)
+		: arrayExpr(arrayExpr), indexExpr(indexExpr) {}
+
+	VariableValue evaluate(Environment& env) const override;
+
+	~ArrayAccessNode() override;
+};
+
+struct MapAccessNode : public ASTNode {
+	ASTNode* mapExpr;    // Expression representing the map
+	ASTNode* keyExpr;    // Expression representing the key
+
+	explicit MapAccessNode(ASTNode* mapExpr, ASTNode* keyExpr)
+		: mapExpr(mapExpr), keyExpr(keyExpr) {}
+
+	VariableValue evaluate(Environment& env) const override;
+
+	~MapAccessNode() override;
+};
+
+struct ArrayNode : public ASTNode {
+	std::vector<ASTNode*> elements;
+
+	explicit ArrayNode(const std::vector<ASTNode*>& elements)
+		: elements(elements) {}
+
+	// Evaluate the array elements and return them as a VariableValue
+	VariableValue evaluate(Environment& env) const override;
+
+	~ArrayNode() override;
+};
+
+struct MapNode : public ASTNode {
+	std::unordered_map<std::string, ASTNode*> elements;
+
+	explicit MapNode(const std::unordered_map<std::string, ASTNode*>& elements)
+		: elements(elements) {}
+
+	// Evaluate the map elements and return them as a VariableValue
+	VariableValue evaluate(Environment& env) const override;
+
+	~MapNode() override;
+};
+
+
 

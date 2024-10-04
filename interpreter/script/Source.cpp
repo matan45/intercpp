@@ -3,6 +3,7 @@
 #include "Environment.hpp"
 #include "Lexer.hpp"
 
+
 int test1() {
 	Environment env;
 
@@ -14,20 +15,20 @@ int test1() {
 
 		// Determine the type of the argument and print accordingly
 		const VariableValue& value = args[0];
-		if (auto doublePtr = std::get_if<double>(&value)) {
+		if (auto doublePtr = std::get_if<double>(&value.value)) {
 			std::cout << "Print from script: " << *doublePtr << std::endl;
 		}
-		else if (auto boolPtr = std::get_if<bool>(&value)) {
+		else if (auto boolPtr = std::get_if<bool>(&value.value)) {
 			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
 		}
-		else if (auto strPtr = std::get_if<std::string>(&value)) {
+		else if (auto strPtr = std::get_if<std::string>(&value.value)) {
 			std::cout << "Print from script: " << *strPtr << std::endl;
 		}
 		else {
 			std::cout << "Print from script: unknown type" << std::endl;
 		}
 
-		return 0.0; // Return 0 since print does not produce a value
+		return VariableValue(0.0); // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
@@ -67,20 +68,20 @@ int test2() {
 
 		// Determine the type of the argument and print accordingly
 		const VariableValue& value = args[0];
-		if (auto doublePtr = std::get_if<double>(&value)) {
+		if (auto doublePtr = std::get_if<double>(&value.value)) {
 			std::cout << "Print from script: " << *doublePtr << std::endl;
 		}
-		else if (auto boolPtr = std::get_if<bool>(&value)) {
+		else if (auto boolPtr = std::get_if<bool>(&value.value)) {
 			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
 		}
-		else if (auto strPtr = std::get_if<std::string>(&value)) {
+		else if (auto strPtr = std::get_if<std::string>(&value.value)) {
 			std::cout << "Print from script: " << *strPtr << std::endl;
 		}
 		else {
 			std::cout << "Print from script: unknown type" << std::endl;
 		}
 
-		return 0.0; // Return 0 since print does not produce a value
+		return VariableValue(0.0); // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
@@ -117,20 +118,20 @@ int test3() {
 
 		// Determine the type of the argument and print accordingly
 		const VariableValue& value = args[0];
-		if (auto doublePtr = std::get_if<double>(&value)) {
+		if (auto doublePtr = std::get_if<double>(&value.value)) {
 			std::cout << "Print from script: " << *doublePtr << std::endl;
 		}
-		else if (auto boolPtr = std::get_if<bool>(&value)) {
+		else if (auto boolPtr = std::get_if<bool>(&value.value)) {
 			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
 		}
-		else if (auto strPtr = std::get_if<std::string>(&value)) {
+		else if (auto strPtr = std::get_if<std::string>(&value.value)) {
 			std::cout << "Print from script: " << *strPtr << std::endl;
 		}
 		else {
 			std::cout << "Print from script: unknown type" << std::endl;
 		}
 
-		return 0.0; // Return 0 since print does not produce a value
+		return VariableValue(0.0); // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
@@ -173,20 +174,20 @@ int test4() {
 
 		// Determine the type of the argument and print accordingly
 		const VariableValue& value = args[0];
-		if (auto doublePtr = std::get_if<double>(&value)) {
+		if (auto doublePtr = std::get_if<double>(&value.value)) {
 			std::cout << "Print from script: " << *doublePtr << std::endl;
 		}
-		else if (auto boolPtr = std::get_if<bool>(&value)) {
+		else if (auto boolPtr = std::get_if<bool>(&value.value)) {
 			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
 		}
-		else if (auto strPtr = std::get_if<std::string>(&value)) {
+		else if (auto strPtr = std::get_if<std::string>(&value.value)) {
 			std::cout << "Print from script: " << *strPtr << std::endl;
 		}
 		else {
 			std::cout << "Print from script: unknown type" << std::endl;
 		}
 
-		return 0.0; // Return 0 since print does not produce a value
+		return VariableValue(0.0); // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
@@ -226,20 +227,20 @@ int test5() {
 
 		// Determine the type of the argument and print accordingly
 		const VariableValue& value = args[0];
-		if (auto doublePtr = std::get_if<double>(&value)) {
+		if (auto doublePtr = std::get_if<double>(&value.value)) {
 			std::cout << "Print from script: " << *doublePtr << std::endl;
 		}
-		else if (auto boolPtr = std::get_if<bool>(&value)) {
+		else if (auto boolPtr = std::get_if<bool>(&value.value)) {
 			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
 		}
-		else if (auto strPtr = std::get_if<std::string>(&value)) {
+		else if (auto strPtr = std::get_if<std::string>(&value.value)) {
 			std::cout << "Print from script: " << *strPtr << std::endl;
 		}
 		else {
 			std::cout << "Print from script: unknown type" << std::endl;
 		}
 
-		return 0.0; // Return 0 since print does not produce a value
+		return VariableValue(0.0); // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
@@ -332,20 +333,20 @@ int test6() {
 
 		// Determine the type of the argument and print accordingly
 		const VariableValue& value = args[0];
-		if (auto doublePtr = std::get_if<double>(&value)) {
+		if (auto doublePtr = std::get_if<double>(&value.value)) {
 			std::cout << "Print from script: " << *doublePtr << std::endl;
 		}
-		else if (auto boolPtr = std::get_if<bool>(&value)) {
+		else if (auto boolPtr = std::get_if<bool>(&value.value)) {
 			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
 		}
-		else if (auto strPtr = std::get_if<std::string>(&value)) {
+		else if (auto strPtr = std::get_if<std::string>(&value.value)) {
 			std::cout << "Print from script: " << *strPtr << std::endl;
 		}
 		else {
 			std::cout << "Print from script: unknown type" << std::endl;
 		}
 
-		return 0.0; // Return 0 since print does not produce a value
+		return VariableValue(0.0); // Return 0 since print does not produce a value
 		});
 	
 	// Example script with for loop and do-while loop
@@ -406,20 +407,20 @@ int test7() {
 
 		// Determine the type of the argument and print accordingly
 		const VariableValue& value = args[0];
-		if (auto doublePtr = std::get_if<double>(&value)) {
+		if (auto doublePtr = std::get_if<double>(&value.value)) {
 			std::cout << "Print from script: " << *doublePtr << std::endl;
 		}
-		else if (auto boolPtr = std::get_if<bool>(&value)) {
+		else if (auto boolPtr = std::get_if<bool>(&value.value)) {
 			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
 		}
-		else if (auto strPtr = std::get_if<std::string>(&value)) {
+		else if (auto strPtr = std::get_if<std::string>(&value.value)) {
 			std::cout << "Print from script: " << *strPtr << std::endl;
 		}
 		else {
 			std::cout << "Print from script: unknown type" << std::endl;
 		}
 
-		return 0.0; // Return 0 since print does not produce a value
+		return VariableValue(0.0); // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
@@ -489,20 +490,20 @@ int test8() {
 	// Now that the function is defined in the environment, call it from C++
 	try {
 		// Arguments to pass to the function
-		std::vector<VariableValue> args = { 5.0, 10.0 };
+		std::vector<VariableValue> args = { VariableValue(5.0), VariableValue(10.0) };
 
 		// Evaluate the function in the script environment
 		VariableValue result = env.evaluateFunction("multiply", args);
 
 		// Determine the type of result and print accordingly
 		std::cout << "Result of multiply(5, 10): ";
-		if (auto doublePtr = std::get_if<double>(&result)) {
+		if (auto doublePtr = std::get_if<double>(&result.value)) {
 			std::cout << *doublePtr << std::endl;
 		}
-		else if (auto boolPtr = std::get_if<bool>(&result)) {
+		else if (auto boolPtr = std::get_if<bool>(&result.value)) {
 			std::cout << (*boolPtr ? "true" : "false") << std::endl;
 		}
-		else if (auto strPtr = std::get_if<std::string>(&result)) {
+		else if (auto strPtr = std::get_if<std::string>(&result.value)) {
 			std::cout << *strPtr << std::endl;
 		}
 		else {
@@ -523,16 +524,16 @@ VariableValue addNumbers(const std::vector<VariableValue>& args) {
 	}
 
 	// Extract and handle types for addition or concatenation
-	if (auto doublePtr1 = std::get_if<double>(&args[0])) {
-		if (auto doublePtr2 = std::get_if<double>(&args[1])) {
+	if (auto doublePtr1 = std::get_if<double>(&args[0].value)) {
+		if (auto doublePtr2 = std::get_if<double>(&args[1].value)) {
 			// If both arguments are doubles, add them
-			return *doublePtr1 + *doublePtr2;
+			return VariableValue(*doublePtr1 + *doublePtr2);
 		}
 	}
-	else if (auto strPtr1 = std::get_if<std::string>(&args[0])) {
-		if (auto strPtr2 = std::get_if<std::string>(&args[1])) {
+	else if (auto strPtr1 = std::get_if<std::string>(&args[0].value)) {
+		if (auto strPtr2 = std::get_if<std::string>(&args[1].value)) {
 			// If both arguments are strings, concatenate them
-			return *strPtr1 + *strPtr2;
+			return VariableValue(*strPtr1 + *strPtr2);
 		}
 	}
 
@@ -550,20 +551,20 @@ int test9() {
 		}
 
 		const VariableValue& value = args[0];
-		if (auto doublePtr = std::get_if<double>(&value)) {
+		if (auto doublePtr = std::get_if<double>(&value.value)) {
 			std::cout << "Print from script: " << *doublePtr << std::endl;
 		}
-		else if (auto boolPtr = std::get_if<bool>(&value)) {
+		else if (auto boolPtr = std::get_if<bool>(&value.value)) {
 			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
 		}
-		else if (auto strPtr = std::get_if<std::string>(&value)) {
+		else if (auto strPtr = std::get_if<std::string>(&value.value)) {
 			std::cout << "Print from script: " << *strPtr << std::endl;
 		}
 		else {
 			std::cout << "Print from script: unknown type" << std::endl;
 		}
 
-		return 0.0;  // Return a default value
+		return VariableValue(0.0);  // Return a default value
 		});
 
 	// Register the C++ function addNumbers into the environment
@@ -606,20 +607,20 @@ int test10() {
 
 		// Determine the type of the argument and print accordingly
 		const VariableValue& value = args[0];
-		if (auto doublePtr = std::get_if<double>(&value)) {
+		if (auto doublePtr = std::get_if<double>(&value.value)) {
 			std::cout << "Print from script: " << *doublePtr << std::endl;
 		}
-		else if (auto boolPtr = std::get_if<bool>(&value)) {
+		else if (auto boolPtr = std::get_if<bool>(&value.value)) {
 			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
 		}
-		else if (auto strPtr = std::get_if<std::string>(&value)) {
+		else if (auto strPtr = std::get_if<std::string>(&value.value)) {
 			std::cout << "Print from script: " << *strPtr << std::endl;
 		}
 		else {
 			std::cout << "Print from script: unknown type" << std::endl;
 		}
 
-		return 0.0; // Return 0 since print does not produce a value
+		return VariableValue(0.0); // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
@@ -667,19 +668,75 @@ int test10() {
 	return 0;
 }
 
+int test11() {
+	Environment env;
+
+	// Register a built-in print function
+	env.registerFunction("print", [](const std::vector<VariableValue>& args) -> VariableValue {
+		if (args.size() != 1) {
+			throw std::runtime_error("print expects 1 argument");
+		}
+
+		// Determine the type of the argument and print accordingly
+		const VariableValue& value = args[0];
+		if (auto doublePtr = std::get_if<double>(&value.value)) {
+			std::cout << "Print from script: " << *doublePtr << std::endl;
+		}
+		else if (auto boolPtr = std::get_if<bool>(&value.value)) {
+			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
+		}
+		else if (auto strPtr = std::get_if<std::string>(&value.value)) {
+			std::cout << "Print from script: " << *strPtr << std::endl;
+		}
+		else {
+			std::cout << "Print from script: unknown type" << std::endl;
+		}
+
+		return VariableValue(0.0); // Return 0 since print does not produce a value
+		});
+
+	// Example script with for loop and do-while loop
+	std::string input = R"(
+		array arr = [1, 2, 3, 4];
+		int x = arr[2];  // Should retrieve the value 3
+		print(x);
+
+		map myMap = { "key1": 10, "key2": 20 };
+		int y = myMap["key2"];  // Should retrieve the value 20
+		print(y);
+
+    )";
+
+	Lexer lexer(input);
+	Parser parser(lexer, env);
+
+	try {
+		ASTNode* root = parser.parse();
+		root->evaluate(env);
+		delete root;
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+	}
+
+	return 0;
+}
+
+
 
 int main() {
 
-	test1();
-	test2();
-	test3();
-	test4();
-	test5();
-	test6();
-	test7();
-	test8();
-	test9();
-	test10();
+// 	test1();
+// 	test2();
+// 	test3();
+// 	test4();
+// 	test5();
+// 	test6();
+// 	test7();
+// 	test8();
+// 	test9();
+// 	test10();
+// 	test11();
 
 	// arrays and maps
 	// imports from other file

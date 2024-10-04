@@ -48,6 +48,12 @@ Token Lexer::getNextToken() {
 			if (word == "false") {
 				return Token(TokenType::FALSE);
 			}
+			if (word == "array") {
+				return Token(TokenType::ARRAY);
+			}
+			if (word == "map") {
+				return Token(TokenType::MAP);
+			}
 			else if (word == "func") {
 				return Token(TokenType::FUNC);
 			}
@@ -147,6 +153,9 @@ Token Lexer::getNextToken() {
 		case '*': ++pos; return Token(TokenType::MULTIPLY);
 		case '/': ++pos; return Token(TokenType::DIVIDE);
 		case '=': ++pos; return Token(TokenType::ASSIGN);
+		case ':': ++pos; return Token(TokenType::COLON);
+		case '[': ++pos; return Token(TokenType::LBRACKET);
+		case ']': ++pos; return Token(TokenType::RBRACKET);
 		case '!': ++pos; return Token(TokenType::NOT);
 		case '(':
 			balanceStack.push('(');

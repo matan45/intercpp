@@ -60,6 +60,9 @@ private:
 
 	ASTNode* parsePrimary();
 
+	ASTNode* parseMapLiteral();
+	ASTNode* parseArrayLiteral();
+
 	ValueType parseType();
 
 	std::string tokenToString(const Token& token);
