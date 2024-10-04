@@ -1,8 +1,8 @@
 #include "AST.hpp"
 #include "Environment.hpp"
 
-VariableValue ProgramNode::evaluate(Environment& env) const {
-	for (ASTNode const* statement : statements) {
+VariableValue ProgramNode::evaluate(Environment& env) {
+	for (ASTNode* statement : statements) {
 		statement->evaluate(env);
 	}
 	return VariableValue(); // Program as a whole doesn’t return a specific value
@@ -14,7 +14,7 @@ ProgramNode::~ProgramNode() {
 	}
 }
 
-VariableValue ForNode::evaluate(Environment& env) const {
+VariableValue ForNode::evaluate(Environment& env) {
 	// Evaluate the initializer (e.g., int i = 0)
 	if (initializer) {
 		initializer->evaluate(env);
@@ -62,17 +62,17 @@ ForNode::~ForNode() {
 	delete body;
 }
 
-VariableValue BooleanNode::evaluate(Environment& env) const {
+VariableValue BooleanNode::evaluate(Environment& env) {
 	// Return 1.0 for true, 0.0 for false (to allow compatibility in numeric contexts)
 	return VariableValue(value);
 }
 
-VariableValue StringNode::evaluate(Environment& env) const {
+VariableValue StringNode::evaluate(Environment& env) {
 	// Return the string value contained in this node.
 	return VariableValue(value);
 }
 
-VariableValue DoWhileNode::evaluate(Environment& env) const {
+VariableValue DoWhileNode::evaluate(Environment& env) {
 	do {
 		body->evaluate(env);
 		VariableValue condValue = condition->evaluate(env);
@@ -97,7 +97,7 @@ DoWhileNode::~DoWhileNode() {
 	delete condition;
 }
 
-VariableValue IncrementNode::evaluate(Environment& env) const {
+VariableValue IncrementNode::evaluate(Environment& env) {
 	// Get the current value of the variable from the environment
 	VariableValue value = env.getVariable(variableName);
 
@@ -131,7 +131,7 @@ VariableValue IncrementNode::evaluate(Environment& env) const {
 	return result;
 }
 
-VariableValue BlockNode::evaluate(Environment& env) const {
+VariableValue BlockNode::evaluate(Environment& env) {
 	VariableValue lastValue;
 	for (const auto& statement : statements) {
 		lastValue = statement->evaluate(env);
@@ -145,7 +145,7 @@ BlockNode::~BlockNode() {
 	}
 }
 
-VariableValue UnaryOpNode::evaluate(Environment& env) const {
+VariableValue UnaryOpNode::evaluate(Environment& env) {
 	// Evaluate the operand
 	VariableValue operandValue = operand->evaluate(env);
 
@@ -177,7 +177,7 @@ UnaryOpNode::~UnaryOpNode() {
 	delete operand;
 }
 
-VariableValue BinaryOpNode::evaluate(Environment& env) const {
+VariableValue BinaryOpNode::evaluate(Environment& env) {
 	VariableValue leftValue = left->evaluate(env);
 	VariableValue rightValue = right->evaluate(env);
 
@@ -276,7 +276,7 @@ BinaryOpNode::~BinaryOpNode() {
 	delete right;
 }
 
-VariableValue WhileNode::evaluate(Environment& env) const {
+VariableValue WhileNode::evaluate(Environment& env) {
 	while (true) {
 		VariableValue condValue = condition->evaluate(env);
 
@@ -302,7 +302,7 @@ WhileNode::~WhileNode() {
 }
 
 
-VariableValue IfNode::evaluate(Environment& env) const {
+VariableValue IfNode::evaluate(Environment& env) {
 	VariableValue condValue = condition->evaluate(env);
 
 	// Ensure the condition is boolean
@@ -327,7 +327,7 @@ IfNode::~IfNode() {
 	delete elseBranch;
 }
 
-VariableValue ReturnNode::evaluate(Environment& env) const {
+VariableValue ReturnNode::evaluate(Environment& env) {
 	VariableValue result = returnValue->evaluate(env);
 
 	// Determine the type of result and print it accordingly
@@ -352,15 +352,20 @@ ReturnNode::~ReturnNode() {
 	delete returnValue;
 }
 
-VariableValue FunctionCallNode::evaluate(Environment& env) const {
+VariableValue FunctionCallNode::evaluate(Environment& env) {
 	// Evaluate all arguments and collect them
 	std::vector<VariableValue> evaluatedArgs;
-	for (ASTNode const* arg : arguments) {
+	argumentsNames.clear();  // Clear previous names
+
+	for (ASTNode* arg : arguments) {
+		if (auto varNode = dynamic_cast<const VariableNode*>(arg)) {
+			argumentsNames.push_back(varNode->getName());
+		}
 		evaluatedArgs.push_back(arg->evaluate(env));
 	}
 
 	// Call the function with the arguments and return the result
-	VariableValue result = env.evaluateFunction(name, evaluatedArgs);
+	VariableValue result = env.evaluateFunction(name, evaluatedArgs, argumentsNames);
 
 	return result;
 }
@@ -372,7 +377,7 @@ FunctionCallNode::~FunctionCallNode() {
 	}
 }
 
-VariableValue FunctionNode::evaluate(Environment& env) const {
+VariableValue FunctionNode::evaluate(Environment& env) {
 	// Execute the function body
 
 	return VariableValue(); // Default return if nothing returned
@@ -382,7 +387,7 @@ FunctionNode::~FunctionNode() {
 	delete body;
 }
 
-VariableValue DeclarationNode::evaluate(Environment& env) const {
+VariableValue DeclarationNode::evaluate(Environment& env) {
 	// Declare the variable in the current scope with a default value
 	VariableValue defaultValue;
 
@@ -429,7 +434,7 @@ DeclarationNode::~DeclarationNode() {
 	delete initializer;
 }
 
-VariableValue AssignmentNode::evaluate(Environment& env) const {
+VariableValue AssignmentNode::evaluate(Environment& env) {
 	if (index == nullptr) {
 		// Regular variable assignment
 		VariableValue value = expression->evaluate(env);
@@ -479,7 +484,7 @@ AssignmentNode::~AssignmentNode() {
 	if (index) delete index;
 }
 
-VariableValue VariableNode::evaluate(Environment& env) const {
+VariableValue VariableNode::evaluate(Environment& env) {
 	auto value = env.getVariable(name);
 	if (std::holds_alternative<double>(value.value)) {
 		double numValue = std::get<double>(value.value);
@@ -514,11 +519,16 @@ VariableValue VariableNode::evaluate(Environment& env) const {
 	}
 }
 
+std::string VariableNode::getName() const
+{
+	return name;
+}
+
 // Evaluate the array elements and return them as a VariableValue
-VariableValue ArrayNode::evaluate(Environment& env) const {
+VariableValue ArrayNode::evaluate(Environment& env) {
 	std::vector<VariableValue> evaluatedElements;
 
-	for (ASTNode const* element : elements) {
+	for (ASTNode* element : elements) {
 		evaluatedElements.push_back(element->evaluate(env));
 	}
 
@@ -531,7 +541,7 @@ ArrayNode::~ArrayNode() {
 	}
 }
 
-VariableValue MapNode::evaluate(Environment& env) const {
+VariableValue MapNode::evaluate(Environment& env) {
 	std::unordered_map<std::string, VariableValue> evaluatedElements;
 
 	for (const auto& [key, valueNode] : elements) {
@@ -547,7 +557,7 @@ MapNode::~MapNode() {
 	}
 }
 
-VariableValue IndexNode::evaluate(Environment& env) const {
+VariableValue IndexNode::evaluate(Environment& env) {
 	// Retrieve the container (array or map) from the environment
 	VariableValue containerValue = env.getVariable(variableName);
 

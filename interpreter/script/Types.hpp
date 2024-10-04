@@ -47,6 +47,7 @@ enum class ValueType {
 
 // Forward declare the struct
 struct VariableValue;
+class  Environment;
 
 // Define an alias to the variant that includes possible value types
 using ValueVariant = std::variant<
@@ -62,4 +63,4 @@ struct VariableValue {
 };
 
 
-using ScriptFunction = std::function<VariableValue(const std::vector<VariableValue>&)>;
+using ScriptFunction = std::function<VariableValue(const std::vector<VariableValue>&, const std::vector<std::string>&, Environment&)>;

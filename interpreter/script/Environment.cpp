@@ -23,9 +23,9 @@ void Environment::registerUserFunction(const std::string& name, ASTNode* functio
 	userFunctionRegistry[name] = functionNode;
 }
 
-VariableValue Environment::evaluateFunction(const std::string& name, const std::vector<VariableValue>& args) {
+VariableValue Environment::evaluateFunction(const std::string& name,const std::vector<VariableValue>& args,const std::vector<std::string>& argumentsNames) {
 	if (functionRegistry.contains(name)) {
-		return functionRegistry.at(name)(args);
+		return functionRegistry.at(name)(args, argumentsNames, *this);
 	}
 
 	if (userFunctionRegistry.contains(name)) {
@@ -51,7 +51,7 @@ VariableValue Environment::evaluateFunction(const std::string& name, const std::
 		}
 
 		// Execute the function body
-		VariableValue returnValue = functionNode->body->evaluate(*this);;
+		VariableValue returnValue = functionNode->body->evaluate(*this);
 
 
 		// Remove the local scope after the function completes
@@ -113,7 +113,7 @@ void Environment::setVariable(const std::string& name, const VariableValue& valu
 }
 
 // Get a variable's value
-VariableValue Environment::getVariable(const std::string& name) const {
+VariableValue Environment::getVariable(const std::string& name) {
 	for (auto scope = variableScopes.rbegin(); scope != variableScopes.rend(); ++scope) {
 		if (scope->contains(name)) {
 			return scope->at(name).first;
