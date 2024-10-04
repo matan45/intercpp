@@ -4,6 +4,8 @@
 
 void Parser::eat(TokenType type) {
 	if (currentToken.type == type) {
+		previousTokens.emplace_back(currentToken);
+		position++;
 		currentToken = lexer.getNextToken();
 	}
 	else {
@@ -89,6 +91,7 @@ ASTNode* Parser::parseStatement() {
 		eat(TokenType::SEMICOLON);
 		return new ReturnNode(expr);
 	}
+
 	else if (currentToken.type == TokenType::IF) {
 		// If statement
 		return parseIfStatement();
@@ -466,19 +469,31 @@ ASTNode* Parser::parsePrimary() {
 	switch (currentToken.type) {
 	case TokenType::NUMBER: {
 		double value = currentToken.numberValue;
-		std::cout << "parsePrimary: Creating NumberNode with value: " << value << std::endl;
 		eat(TokenType::NUMBER);
+		std::cout << "parsePrimary: Creating NumberNode with value: " << value << std::endl;
 		return new NumberNode(value);
 	}
 	case TokenType::STRING_LITERAL: {
 		std::string value = currentToken.stringValue;
-		std::cout << "parsePrimary: Creating StringNode with value: " << value << std::endl;
 		eat(TokenType::STRING_LITERAL);
+
+		std::cout << "parsePrimary: Creating StringNode with value: " << value << std::endl;
 		return new StringNode(value);
 	}
 	case TokenType::IDENTIFIER: {
 		std::string name = currentToken.stringValue;
 		eat(TokenType::IDENTIFIER);
+
+		if (currentToken.type == TokenType::LBRACKET) {
+			// Handle map or array indexing
+			eat(TokenType::LBRACKET);
+			std::cout << "parsePrimary: Creating IndexNode with value: " << name << std::endl;
+			ASTNode* index = parseExpression();
+			eat(TokenType::RBRACKET);
+			eat(TokenType::SEMICOLON);
+			return new IndexNode(name, index);  // Create IndexNode for indexing into arrays or maps
+
+		}
 
 		if (currentToken.type == TokenType::LPAREN) {
 			std::cout << "parsePrimary: Parsing function call with name: " << name << std::endl;
@@ -618,6 +633,11 @@ std::string Parser::tokenToString(const Token& token) {
 	case TokenType::RPAREN: return "RPAREN ())";
 	case TokenType::LBRACE: return "LBRACE ({)";
 	case TokenType::RBRACE: return "RBRACE (})";
+	case TokenType::RBRACKET: return "RBRACE (])";
+	case TokenType::LBRACKET: return "RBRACE ([)";
+	case TokenType::COLON: return "RBRACE (:)";
+	case TokenType::MAP: return "MAP";
+	case TokenType::ARRAY: return "ARRAY";
 	case TokenType::SEMICOLON: return "SEMICOLON (;)";
 	case TokenType::PLUS: return "PLUS (+)";
 	case TokenType::MINUS: return "MINUS (-)";

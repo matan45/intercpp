@@ -246,30 +246,6 @@ struct UnaryOpNode : public ASTNode {
 	~UnaryOpNode() override;
 };
 
-struct ArrayAccessNode : public ASTNode {
-	ASTNode* arrayExpr;  // Expression representing the array
-	ASTNode* indexExpr;  // Expression representing the index
-
-	explicit ArrayAccessNode(ASTNode* arrayExpr, ASTNode* indexExpr)
-		: arrayExpr(arrayExpr), indexExpr(indexExpr) {}
-
-	VariableValue evaluate(Environment& env) const override;
-
-	~ArrayAccessNode() override;
-};
-
-struct MapAccessNode : public ASTNode {
-	ASTNode* mapExpr;    // Expression representing the map
-	ASTNode* keyExpr;    // Expression representing the key
-
-	explicit MapAccessNode(ASTNode* mapExpr, ASTNode* keyExpr)
-		: mapExpr(mapExpr), keyExpr(keyExpr) {}
-
-	VariableValue evaluate(Environment& env) const override;
-
-	~MapAccessNode() override;
-};
-
 struct ArrayNode : public ASTNode {
 	std::vector<ASTNode*> elements;
 
@@ -293,6 +269,22 @@ struct MapNode : public ASTNode {
 
 	~MapNode() override;
 };
+
+struct IndexNode : public ASTNode {
+	std::string variableName;
+	ASTNode* indexExpression;
+
+	IndexNode(const std::string& name, ASTNode* indexExpr)
+		: variableName(name), indexExpression(indexExpr) {}
+
+	~IndexNode() override {
+		delete indexExpression;
+	}
+
+	VariableValue evaluate(Environment& env) const override;
+};
+
+
 
 
 

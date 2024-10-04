@@ -97,11 +97,17 @@ void Environment::declareVariable(const std::string& name, ValueType type) {
 }
 
 void Environment::setVariable(const std::string& name, const VariableValue& value) {
+	
 	for (auto scope = variableScopes.rbegin(); scope != variableScopes.rend(); ++scope) {
 		if (scope->contains(name)) {
 			scope->at(name).first = value;
 			return;
 		}
+	}
+	//if not in scope then global
+	if (variableTable.contains(name)) {
+		variableTable.at(name).first = value;
+		return;
 	}
 	throw std::runtime_error("Undefined variable: " + name);
 }
@@ -113,6 +119,11 @@ VariableValue Environment::getVariable(const std::string& name) const {
 			return scope->at(name).first;
 		}
 	}
+	//if not in scope then global
+	if (variableTable.contains(name)) {
+		return variableTable.at(name).first;
+	}
+
 	throw std::runtime_error("Undefined variable: " + name);
 }
 

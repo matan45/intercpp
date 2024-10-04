@@ -514,64 +514,11 @@ VariableValue VariableNode::evaluate(Environment& env) const {
 	}
 }
 
-VariableValue ArrayAccessNode::evaluate(Environment& env) const {
-	VariableValue arrayValue = arrayExpr->evaluate(env);
-	if (auto arrayPtr = std::get_if<std::vector<VariableValue>>(&arrayValue.value)) {
-		VariableValue indexValue = indexExpr->evaluate(env);
-		if (auto indexPtr = std::get_if<double>(&indexValue.value)) {
-			int index = static_cast<int>(*indexPtr);
-			if (index >= 0 && index < arrayPtr->size()) {
-				return (*arrayPtr)[index];
-			}
-			else {
-				throw std::runtime_error("Array index out of bounds.");
-			}
-		}
-		else {
-			throw std::runtime_error("Array index must be an integer.");
-		}
-	}
-	else {
-		throw std::runtime_error("Expression does not evaluate to an array.");
-	}
-}
-
-ArrayAccessNode::~ArrayAccessNode() {
-	delete arrayExpr;
-	delete indexExpr;
-}
-
-VariableValue MapAccessNode::evaluate(Environment& env) const {
-	VariableValue mapValue = mapExpr->evaluate(env);
-	if (auto mapPtr = std::get_if<std::unordered_map<std::string, VariableValue>>(&mapValue.value)) {
-		VariableValue keyValue = keyExpr->evaluate(env);
-		if (auto keyPtr = std::get_if<std::string>(&keyValue.value)) {
-			if (mapPtr->find(*keyPtr) != mapPtr->end()) {
-				return (*mapPtr)[*keyPtr];
-			}
-			else {
-				throw std::runtime_error("Key not found in map.");
-			}
-		}
-		else {
-			throw std::runtime_error("Map key must be a string.");
-		}
-	}
-	else {
-		throw std::runtime_error("Expression does not evaluate to a map.");
-	}
-}
-
-MapAccessNode::~MapAccessNode() {
-	delete mapExpr;
-	delete keyExpr;
-}
-
 // Evaluate the array elements and return them as a VariableValue
 VariableValue ArrayNode::evaluate(Environment& env) const {
 	std::vector<VariableValue> evaluatedElements;
 
-	for (ASTNode* element : elements) {
+	for (ASTNode const* element : elements) {
 		evaluatedElements.push_back(element->evaluate(env));
 	}
 
@@ -598,4 +545,48 @@ MapNode::~MapNode() {
 	for (const auto& [key, valueNode] : elements) {
 		delete valueNode;
 	}
+}
+
+VariableValue IndexNode::evaluate(Environment& env) const {
+	// Retrieve the container (array or map) from the environment
+	VariableValue containerValue = env.getVariable(variableName);
+
+	// Evaluate the index expression
+	VariableValue indexValue = indexExpression->evaluate(env);
+
+	// Handle indexing for arrays
+	if (auto arrayPtr = std::get_if<std::vector<VariableValue>>(&containerValue.value)) {
+		// Ensure the index is numeric
+		if (auto indexDouble = std::get_if<double>(&indexValue.value)) {
+			int index = static_cast<int>(*indexDouble);
+			if (index >= 0 && index < arrayPtr->size()) {
+				return VariableValue((*arrayPtr)[index].value);  // Return the element at the given index
+			}
+			else {
+				throw std::runtime_error("Array index out of bounds for variable: " + variableName);
+			}
+		}
+		else {
+			throw std::runtime_error("Array indexing requires a numeric index.");
+		}
+	}
+
+	// Handle indexing for maps
+	if (auto mapPtr = std::get_if<std::unordered_map<std::string, VariableValue>>(&containerValue.value)) {
+		if (auto strPtr = std::get_if<std::string>(&indexValue.value)) {
+			auto it = mapPtr->find(*strPtr);
+			if (it != mapPtr->end()) {
+				return VariableValue(it->second.value);  // Return the value corresponding to the key
+			}
+			else {
+				throw std::runtime_error("Key not found in map: " + *strPtr);
+			}
+		}
+		else {
+			throw std::runtime_error("Map indexing requires a string key.");
+		}
+	}
+
+	// If the container is neither an array nor a map, throw an error
+	throw std::runtime_error("Attempted to index a non-container variable: " + variableName);
 }

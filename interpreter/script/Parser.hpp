@@ -13,9 +13,11 @@ private:
 	Lexer& lexer;
 	Environment& env;
 	Token currentToken;
+	int position = 0;
+	std::vector<Token> previousTokens;
 
 public:
-	Parser(Lexer& lexer, Environment& env) : lexer(lexer), env(env), currentToken(lexer.getNextToken()) {}
+	explicit Parser(Lexer& lexer, Environment& env) : lexer(lexer), env(env), currentToken(lexer.getNextToken()){}
 
 	ASTNode* parse() {
 		return parseProgram();
