@@ -358,7 +358,7 @@ func bool evaluateLogic(bool a, bool b) {
 func bool evaluateComplexLogic(bool a, bool b, bool c) {
     return (a && b) || c;  // Logical AND followed by OR
 }
-//TODO issue of declaration inside function
+
 func bool testLogic() {
     bool tt = true;
     bool gg = false;
@@ -668,6 +668,45 @@ int test10() {
 	return 0;
 }
 
+// Helper function to print a VariableValue, used for arrays and maps
+void printVariableValue(const VariableValue & value) {
+	if (auto doublePtr = std::get_if<double>(&value.value)) {
+		std::cout << *doublePtr;
+	}
+	else if (auto boolPtr = std::get_if<bool>(&value.value)) {
+		std::cout << (*boolPtr ? "true" : "false");
+	}
+	else if (auto strPtr = std::get_if<std::string>(&value.value)) {
+		std::cout << "\"" << *strPtr << "\"";
+	}
+	else if (auto arrayPtr = std::get_if<std::vector<VariableValue>>(&value.value)) {
+		std::cout << "[";
+		for (size_t i = 0; i < arrayPtr->size(); ++i) {
+			if (i > 0) {
+				std::cout << ", ";
+			}
+			printVariableValue((*arrayPtr)[i]);
+		}
+		std::cout << "]";
+	}
+	else if (auto mapPtr = std::get_if<std::unordered_map<std::string, VariableValue>>(&value.value)) {
+		std::cout << "{";
+		bool first = true;
+		for (const auto& pair : *mapPtr) {
+			if (!first) {
+				std::cout << ", ";
+			}
+			first = false;
+			std::cout << "\"" << pair.first << "\": ";
+			printVariableValue(pair.second);
+		}
+		std::cout << "}";
+	}
+	else {
+		std::cout << "unknown type";
+	}
+}
+
 int test11() {
 	Environment env;
 
@@ -688,22 +727,54 @@ int test11() {
 		else if (auto strPtr = std::get_if<std::string>(&value.value)) {
 			std::cout << "Print from script: " << *strPtr << std::endl;
 		}
+		else if (auto arrayPtr = std::get_if<std::vector<VariableValue>>(&value.value)) {
+			// Print array elements
+			std::cout << "Print from script: [";
+			for (size_t i = 0; i < arrayPtr->size(); ++i) {
+				if (i > 0) {
+					std::cout << ", ";
+				}
+				// Print each element in the array recursively
+				const VariableValue& element = (*arrayPtr)[i];
+				printVariableValue(element);
+			}
+			std::cout << "]" << std::endl;
+		}
+		else if (auto mapPtr = std::get_if<std::unordered_map<std::string, VariableValue>>(&value.value)) {
+			// Print map key-value pairs
+			std::cout << "Print from script: {";
+			bool first = true;
+			for (const auto& pair : *mapPtr) {
+				if (!first) {
+					std::cout << ", ";
+				}
+				first = false;
+				std::cout << "\"" << pair.first << "\": ";
+				// Print each value in the map recursively
+				printVariableValue(pair.second);
+			}
+			std::cout << "}" << std::endl;
+		}
 		else {
 			std::cout << "Print from script: unknown type" << std::endl;
 		}
 
-		return VariableValue(0.0); // Return 0 since print does not produce a value
+		return VariableValue(); // Return 0 since print does not produce a value
 		});
 
 	// Example script with for loop and do-while loop
 	std::string input = R"(
-		array arr = [1, 2, 3, 4];
+		array arr;
+		arr = [1, 2, 3, 4];
 		int x = arr[2];  // Should retrieve the value 3
 		print(x);
 
 		map myMap = { "key1": 10, "key2": 20 };
 		int y = myMap["key2"];  // Should retrieve the value 20
 		print(y);
+
+		print(arr);
+		print(myMap);
 
     )";
 
@@ -738,9 +809,10 @@ int main() {
 	test10();
  	test11();
 
-	// arrays and maps
 	// imports from other file
 	// classes constructor new object method dot assignment destructor delete
+	// refactor
+	// 
 	// enum
 	// switch case
 	// final for variables

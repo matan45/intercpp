@@ -521,6 +521,12 @@ ASTNode* Parser::parsePrimary() {
 		std::cout << "parsePrimary: Creating BooleanNode with value: false" << std::endl;
 		return new BooleanNode(false);
 	}
+	case TokenType::LBRACE: {
+		return parseMapLiteral();
+	}
+	case TokenType::LBRACKET: {
+		return parseArrayLiteral();
+	}
 	default:
 		throw std::runtime_error("Unexpected token in primary");
 	}
