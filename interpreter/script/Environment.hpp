@@ -20,9 +20,10 @@ private:
 	std::unordered_map<std::string, ScriptFunction> functionRegistry;
 	std::unordered_map<std::string, ASTNode*> userFunctionRegistry;
 	std::unordered_map<std::string, std::pair<VariableValue, ValueType>> variableTable;
+	std::vector<std::unordered_map<std::string, std::pair<VariableValue, ValueType>>> variableScopes;
 
 public:
-	Environment() = default;
+	explicit Environment();
 	~Environment() = default;
 
 	// Register a built-in C++ function by name
@@ -32,7 +33,7 @@ public:
 	void registerUserFunction(const std::string& name, ASTNode* functionNode);
 
 	// Evaluate a function by name with given arguments
-	VariableValue evaluateFunction(const std::string& name, const std::vector<VariableValue>& args) const;
+	VariableValue evaluateFunction(const std::string& name, const std::vector<VariableValue>& args);
 
 	// Declare a variable by name and type
 	void declareVariable(const std::string& name, ValueType type);
@@ -41,6 +42,17 @@ public:
 
 	// Get a variable's value
 	VariableValue getVariable(const std::string& name) const;
+
+	// Add a new scope (for entering a function)
+	void pushScope();
+
+	// Remove the current scope (for exiting a function)
+	void popScope() {
+		if (variableScopes.size() <= 1) {
+			throw std::runtime_error("Cannot pop the global scope.");
+		}
+		variableScopes.pop_back();
+	}
 	
 };
 

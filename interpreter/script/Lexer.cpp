@@ -69,6 +69,9 @@ Token Lexer::getNextToken() {
 			else if (word == "if") {
 				return Token(TokenType::IF);
 			}
+			else if (word == "else") {
+				return Token(TokenType::ELSE);
+			}
 			else if (word == "while") {
 				return Token(TokenType::WHILE);
 			}

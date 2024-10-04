@@ -294,9 +294,26 @@ ASTNode* Parser::parseIfStatement() {
 	ASTNode* thenBranch = parseStatement();
 	ASTNode* elseBranch = nullptr;
 
-	if (currentToken.type == TokenType::ELSE) {
+	// Parse `else if` and `else` branches if present
+	while (currentToken.type == TokenType::ELSE) {
 		eat(TokenType::ELSE);
-		elseBranch = parseStatement();
+
+		// Check if it's an `else if`
+		if (currentToken.type == TokenType::IF) {
+			eat(TokenType::IF);
+			eat(TokenType::LPAREN);
+			ASTNode* elseIfCondition = parseExpression();  // Parse the `else if` condition
+			eat(TokenType::RPAREN);
+			ASTNode* elseIfBranch = parseStatement();  // Parse the `else if` block
+
+			// Create a new IfNode for the `else if` and chain it
+			elseBranch = new IfNode(elseIfCondition, elseIfBranch, elseBranch);
+		}
+		else {
+			// It must be a simple `else` block
+			elseBranch = parseStatement();
+			break;  // No more `else if` after an `else`
+		}
 	}
 
 	return new IfNode(condition, thenBranch, elseBranch);

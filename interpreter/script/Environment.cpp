@@ -1,6 +1,12 @@
 #include "Environment.hpp"
 #include "AST.hpp"
 
+Environment::Environment()
+{
+	// Initialize with a global scope
+	variableScopes.emplace_back();
+}
+
 // Register a built-in C++ function by name
 void Environment::registerFunction(const std::string& name, ScriptFunction func) {
 	if (functionRegistry.contains(name)) {
@@ -17,42 +23,41 @@ void Environment::registerUserFunction(const std::string& name, ASTNode* functio
 	userFunctionRegistry[name] = functionNode;
 }
 
-VariableValue Environment::evaluateFunction(const std::string& name, const std::vector<VariableValue>& args) const {
-	// Check if the function is a C++ native function
+VariableValue Environment::evaluateFunction(const std::string& name, const std::vector<VariableValue>& args) {
 	if (functionRegistry.contains(name)) {
 		return functionRegistry.at(name)(args);
 	}
 
-	// Check if the function is a user-defined function
 	if (userFunctionRegistry.contains(name)) {
 		auto* functionNode = dynamic_cast<FunctionNode*>(userFunctionRegistry.at(name));
 		if (!functionNode) {
 			throw std::runtime_error("Function " + name + " is not properly defined.");
 		}
 
-		// Check if the number of arguments matches the number of parameters
 		if (args.size() != functionNode->parameters.size()) {
 			throw std::runtime_error("Function " + name + " expects " +
 				std::to_string(functionNode->parameters.size()) +
 				" arguments, but got " + std::to_string(args.size()));
 		}
 
-		// Create a temporary environment for the function call
-		Environment functionEnv(*this); // Copy the current environment for local scope
+		// Create a new local scope for this function call
+		pushScope();
 
-		// Assign arguments to the parameters
+		// Assign arguments to the parameters in the new scope
 		for (size_t i = 0; i < args.size(); ++i) {
 			const auto& param = functionNode->parameters[i];
-			functionEnv.declareVariable(param.first, param.second);
-			functionEnv.setVariable(param.first, args[i]);
+			declareVariable(param.first, param.second);
+			setVariable(param.first, args[i]);
 		}
 
-
 		// Execute the function body
-		VariableValue value = functionNode->body->evaluate(functionEnv);
-		std::cout << "Function " << name << " completed without an explicit return." << std::endl;
-		return value; // Default return value if no explicit return is encountered
+		VariableValue returnValue = functionNode->body->evaluate(*this);;
 
+
+		// Remove the local scope after the function completes
+		popScope();
+
+		return returnValue;
 	}
 
 	throw std::runtime_error("Undefined function: " + name);
@@ -62,66 +67,45 @@ VariableValue Environment::evaluateFunction(const std::string& name, const std::
 
 // Declare a variable by name and type
 void Environment::declareVariable(const std::string& name, ValueType type) {
-	if (variableTable.contains(name)) {
+	if (variableScopes.back().contains(name)) {
 		throw std::runtime_error("Variable already declared: " + name);
 	}
+	VariableValue defaultValue;
+
 	switch (type) {
-	case ValueType::INT:
-		variableTable[name] = std::make_pair(0.0, type);
-		break;
-	case ValueType::FLOAT:
-		variableTable[name] = std::make_pair(0.0, type);
-		break;
-	case ValueType::BOOL:
-		variableTable[name] = std::make_pair(false, type);
-		break;
-	case ValueType::STRING:
-		variableTable[name] = std::make_pair(std::string(""), type);
-		break;
-	default:
-		throw std::runtime_error("Unsupported variable type for declaration.");
+	case ValueType::INT: defaultValue = 0.0; break;
+	case ValueType::FLOAT: defaultValue = 0.0; break;
+	case ValueType::BOOL: defaultValue = false; break;
+	case ValueType::STRING: defaultValue = ""; break;
+	default: throw std::runtime_error("Unsupported variable type for declaration.");
 	}
+
+	variableScopes.back()[name] = std::make_pair(defaultValue, type);
 }
 
 void Environment::setVariable(const std::string& name, const VariableValue& value) {
-	if (!variableTable.contains(name)) {
-		throw std::runtime_error("Undefined variable: " + name);
-	}
-
-	ValueType type = variableTable[name].second;
-
-	// Perform type checks to ensure correctness
-	if (type == ValueType::INT) {
-		if (!std::holds_alternative<double>(value) ||
-			std::get<double>(value) != static_cast<int>(std::get<double>(value))) {
-			throw std::runtime_error("Type error: Expected int value for variable " + name);
+	for (auto scope = variableScopes.rbegin(); scope != variableScopes.rend(); ++scope) {
+		if (scope->contains(name)) {
+			scope->at(name).first = value;
+			return;
 		}
 	}
-	else if (type == ValueType::FLOAT) {
-		if (!std::holds_alternative<double>(value)) {
-			throw std::runtime_error("Type error: Expected float value for variable " + name);
-		}
-	}
-	else if (type == ValueType::BOOL) {
-		if (!std::holds_alternative<bool>(value)) {
-			throw std::runtime_error("Type error: Expected boolean value for variable " + name);
-		}
-	}
-	else if (type == ValueType::STRING) {
-		if (!std::holds_alternative<std::string>(value)) {
-			throw std::runtime_error("Type error: Expected string value for variable " + name);
-		}
-	}
-
-	// Assign the value to the variable
-	variableTable[name].first = value;
-	std::cout << "Environment: Updated variable " << name << " to new value." << std::endl;
+	throw std::runtime_error("Undefined variable: " + name);
 }
 
 // Get a variable's value
 VariableValue Environment::getVariable(const std::string& name) const {
-	if (!variableTable.contains(name)) {
-		throw std::runtime_error("Undefined variable: " + name);
+	for (auto scope = variableScopes.rbegin(); scope != variableScopes.rend(); ++scope) {
+		if (scope->contains(name)) {
+			return scope->at(name).first;
+		}
 	}
-	return variableTable.at(name).first;
+	throw std::runtime_error("Undefined variable: " + name);
+}
+
+void Environment::pushScope()
+{
+
+	variableScopes.emplace_back();
+
 }

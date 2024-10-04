@@ -595,6 +595,78 @@ int test9() {
 	return 0;
 }
 
+int test10() {
+	Environment env;
+
+	// Register a built-in print function
+	env.registerFunction("print", [](const std::vector<VariableValue>& args) -> VariableValue {
+		if (args.size() != 1) {
+			throw std::runtime_error("print expects 1 argument");
+		}
+
+		// Determine the type of the argument and print accordingly
+		const VariableValue& value = args[0];
+		if (auto doublePtr = std::get_if<double>(&value)) {
+			std::cout << "Print from script: " << *doublePtr << std::endl;
+		}
+		else if (auto boolPtr = std::get_if<bool>(&value)) {
+			std::cout << "Print from script: " << (*boolPtr ? "true" : "false") << std::endl;
+		}
+		else if (auto strPtr = std::get_if<std::string>(&value)) {
+			std::cout << "Print from script: " << *strPtr << std::endl;
+		}
+		else {
+			std::cout << "Print from script: unknown type" << std::endl;
+		}
+
+		return 0.0; // Return 0 since print does not produce a value
+		});
+
+	// Example script with for loop and do-while loop
+	std::string input = R"(
+		func bool evaluateLogic(bool a) {
+			return a;  // Logical AND
+		}
+		
+		//TODO issue of declaration inside function
+		func bool testLogic() {
+			bool a = true;
+			bool b = true;
+			bool c = true;
+
+			if(a){
+				return a;
+			}
+			else if(b){
+				return b;
+			}
+			else {
+				return c;
+			}
+
+			return a;
+		}
+
+
+    bool a = testLogic();    
+
+    )";
+
+	Lexer lexer(input);
+	Parser parser(lexer, env);
+
+	try {
+		ASTNode* root = parser.parse();
+		root->evaluate(env);
+		delete root;
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+	}
+
+	return 0;
+}
+
 
 int main() {
 
@@ -607,12 +679,15 @@ int main() {
 	test7();
 	test8();
 	test9();
-	//need to add switch case
-	// final for variables
-	// imports from other file
+	test10();
+
 	// arrays and maps
+	// imports from other file
 	// classes constructor new object method dot assignment destructor delete
 	// enum
+	// switch case
+	// final for variables
+	// 
 	// validations
 	//globals functions and variables needs to be equines
 	// class names need to be equines 
