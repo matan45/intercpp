@@ -101,6 +101,8 @@ int test1() {
 
 	// Example script with for loop and do-while loop
 	std::string input = R"(
+		#import "test.t"
+
         int x = 8;
         int y;
         y = x - 3;
@@ -713,7 +715,7 @@ int main() {
   	test11();
  	test12();
 
-	// imports from other file
+	// imports from other file need to test
 	// classes constructor new object method dot assignment destructor delete
 	// refactor
 	// 

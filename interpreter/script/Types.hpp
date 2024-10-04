@@ -23,6 +23,7 @@ enum class TokenType {
 	PLUSPLUS, MINUSMINUS,
 	ARRAY,
 	MAP,
+	IMPORT,
 	RBRACKET,
 	LBRACKET,
 	COLON,

@@ -1,4 +1,6 @@
 #include "Lexer.hpp"
+#include <fstream>
+#include <sstream>
 
 Token Lexer::getNextToken() {
 	while (pos < input.length()) {
@@ -30,7 +32,9 @@ Token Lexer::getNextToken() {
 		}
 
 		// Tokenize numbers
-		if (isdigit(current) || current == '.') {
+		if (isdigit(current)) {
+			if(current == '.')
+				continue;
 			return Token(TokenType::NUMBER, parseNumber());
 		}
 
@@ -40,7 +44,7 @@ Token Lexer::getNextToken() {
 		}
 
 		// Tokenize identifiers and keywords
-		if (isalpha(current)) {
+		if (isalpha(current)|| current == '#') {
 			std::string word = parseIdentifier();
 			if (word == "true") {
 				return Token(TokenType::TRUE);
@@ -89,6 +93,34 @@ Token Lexer::getNextToken() {
 			}
 			else if (word == "return") {
 				return Token(TokenType::RETURN);
+			}
+			else if (word == "#import") {
+				// Parse the string literal representing the file path
+				while (pos < input.length() && isspace(input[pos])) {
+					++pos; // Skip whitespaces after `#import`
+				}
+
+				if (pos < input.length() && input[pos] == '"') {
+					std::string filePath = parseStringLiteral().stringValue;
+
+					// Check if the file is already included
+					if (includedFiles.find(filePath) != includedFiles.end()) {
+						throw std::runtime_error("File '" + filePath + "' has already been imported, preventing circular import.");
+					}
+
+					includedFiles.insert(filePath);
+
+					// Read the content of the file
+					std::string fileContent = readFile(filePath);
+
+					// Insert the file content into the input
+					input.insert(pos, fileContent);
+				}
+				else {
+					throw std::runtime_error("Expected a file path after #import");
+				}
+
+				return Token(TokenType::IMPORT);
 			}
 
 			return Token(TokenType::IDENTIFIER, word);
@@ -218,8 +250,21 @@ double Lexer::parseNumber() {
 
 std::string Lexer::parseIdentifier() {
 	size_t startPos = pos;
-	while (pos < input.length() && (isalnum(input[pos]) || input[pos] == '_')) {
+	while (pos < input.length() && (isalnum(input[pos]) || input[pos] == '_' || input[pos] == '#')) {
 		++pos;
 	}
 	return input.substr(startPos, pos - startPos);
+}
+
+std::string Lexer::readFile(const std::string& filePath)
+{
+	std::ifstream file(filePath);
+	if (!file.is_open()) {
+		throw std::runtime_error("Unable to open file: " + filePath);
+	}
+
+	std::ostringstream contentStream;
+	contentStream << file.rdbuf();
+	file.close();
+	return contentStream.str();
 }

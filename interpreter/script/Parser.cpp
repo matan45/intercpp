@@ -17,7 +17,11 @@ ASTNode* Parser::parseProgram() {
 	std::vector<ASTNode*> statements;
 	while (currentToken.type != TokenType::END) {
 		std::cout << tokenToString(currentToken) << std::endl;
-		statements.push_back(parseStatement());
+		ASTNode* node = parseStatement();
+		if (node) {
+			statements.push_back(node);
+		}
+		
 	}
 	return new ProgramNode(statements);
 }
@@ -117,6 +121,11 @@ ASTNode* Parser::parseStatement() {
 		}
 		eat(TokenType::RBRACE);
 		return new BlockNode(bodyStatements);
+	}
+	else if (currentToken.type == TokenType::IMPORT)
+	{
+		eat(TokenType::IMPORT);
+		return nullptr;
 	}
 	// Throw an error for an unrecognized token
 	throw std::runtime_error("Unexpected token in statement: " + tokenToString(currentToken));
@@ -656,6 +665,7 @@ std::string Parser::tokenToString(const Token& token) {
 	case TokenType::LESS: return "LESS (<)";
 	case TokenType::GREATER_EQUALS: return "GREATER EQUALS (>=)";
 	case TokenType::LESS_EQUALS: return "LESS EQUALS (<=)";
+	case TokenType::IMPORT: return "#IMPORT";
 	default: return "UNKNOWN TOKEN";
 	}
 }
