@@ -33,7 +33,8 @@ public:
 	void registerUserFunction(const std::string& name, ASTNode* functionNode);
 
 	// Evaluate a function by name with given arguments
-	VariableValue evaluateFunction(const std::string& name, const std::vector<VariableValue>& args);
+	VariableValue evaluateFunction(const std::string& name,const std::vector<VariableValue>& args,const std::vector<std::string>& argumentsNames = std::vector<std::string>());
+
 
 	// Declare a variable by name and type
 	void declareVariable(const std::string& name, ValueType type);
@@ -41,7 +42,7 @@ public:
 	void setVariable(const std::string& name, const VariableValue& value);
 
 	// Get a variable's value
-	VariableValue getVariable(const std::string& name) const;
+	VariableValue getVariable(const std::string& name);
 
 	// Add a new scope (for entering a function)
 	void pushScope();

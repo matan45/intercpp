@@ -2,6 +2,8 @@
 #include <variant>
 #include <functional>
 #include <string>
+#include <vector>
+#include <unordered_map>
 
 enum class TokenType {
 	IDENTIFIER,
@@ -16,9 +18,15 @@ enum class TokenType {
 	EQUALS, NOT_EQUALS, // ==, !=
 	LESS, LESS_EQUALS, GREATER, GREATER_EQUALS, // <, <=, >, >=
 	FUNC, RETURN, IF, ELSE, WHILE, FOR, // Keywords
-	INT, FLOAT, BOOL,VOID_TYPE, STRING_TYPE, // Data types
+	INT, FLOAT, BOOL, VOID_TYPE, STRING_TYPE, // Data types
 	TRUE, FALSE, DO,
 	PLUSPLUS, MINUSMINUS,
+	ARRAY,
+	MAP,
+	IMPORT,
+	RBRACKET,
+	LBRACKET,
+	COLON,
 	END // End of input
 };
 
@@ -33,9 +41,27 @@ enum class ValueType {
 	FLOAT,
 	BOOL,
 	VOID_TYPE,
-	STRING
+	STRING,
+	ARRAY,
+	MAP
 };
 
-// Define the type of function signature used for callable functions
-using VariableValue = std::variant<double, bool, std::string>;
-using ScriptFunction = std::function<VariableValue(const std::vector<VariableValue>&)>;
+// Forward declare the struct
+struct VariableValue;
+class  Environment;
+
+// Define an alias to the variant that includes possible value types
+using ValueVariant = std::variant<
+	double,                                  // INT, FLOAT (handled as double for simplicity)
+	bool,                                    // BOOL
+	std::string,                             // STRING
+	std::vector<VariableValue>,              // ARRAY: vector of VariableValue elements
+	std::unordered_map<std::string, VariableValue>  // MAP: unordered map with string keys
+>;
+
+struct VariableValue {
+	ValueVariant value;
+};
+
+
+using ScriptFunction = std::function<VariableValue(const std::vector<VariableValue>&, const std::vector<std::string>&, Environment&)>;

@@ -7,6 +7,7 @@
 #include <cctype>
 #include <stdexcept>
 #include <stack>
+#include <set>
 
 #include "Types.hpp"
 
@@ -27,6 +28,7 @@ private:
 	std::string input;
 	size_t pos;
 	std::stack<char> balanceStack;  // Stack for keeping track of parentheses and braces
+	std::set<std::string> includedFiles;
 
 	// List of keywords and their corresponding TokenType
 	std::unordered_map<std::string, TokenType> keywords = {
@@ -43,7 +45,8 @@ private:
 		{"string", TokenType::STRING_TYPE},
 		{"true", TokenType::TRUE},
 		{"false", TokenType::FALSE},
-		{"void", TokenType::VOID_TYPE}
+		{"void", TokenType::VOID_TYPE},
+		{"#import", TokenType::IMPORT}
 	};
 
 public:
@@ -55,4 +58,5 @@ private:
     Token parseStringLiteral();
     double parseNumber();
     std::string parseIdentifier();
+	std::string readFile(const std::string& filePath);
 };

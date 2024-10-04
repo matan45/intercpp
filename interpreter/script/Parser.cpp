@@ -4,6 +4,8 @@
 
 void Parser::eat(TokenType type) {
 	if (currentToken.type == type) {
+		previousTokens.emplace_back(currentToken);
+		position++;
 		currentToken = lexer.getNextToken();
 	}
 	else {
@@ -15,7 +17,11 @@ ASTNode* Parser::parseProgram() {
 	std::vector<ASTNode*> statements;
 	while (currentToken.type != TokenType::END) {
 		std::cout << tokenToString(currentToken) << std::endl;
-		statements.push_back(parseStatement());
+		ASTNode* node = parseStatement();
+		if (node) {
+			statements.push_back(node);
+		}
+		
 	}
 	return new ProgramNode(statements);
 }
@@ -28,7 +34,9 @@ ASTNode* Parser::parseStatement() {
 	else if (currentToken.type == TokenType::INT ||
 		currentToken.type == TokenType::FLOAT ||
 		currentToken.type == TokenType::BOOL ||
-		currentToken.type == TokenType::STRING_TYPE) {
+		currentToken.type == TokenType::STRING_TYPE ||
+		currentToken.type == TokenType::ARRAY ||
+		currentToken.type == TokenType::MAP) {
 		// Variable declaration
 		return parseDeclaration();
 	}
@@ -39,6 +47,21 @@ ASTNode* Parser::parseStatement() {
 		if (currentToken.type == TokenType::ASSIGN) {
 			// Assignment statement
 			return parseAssignment(identifier);
+		}
+		// Handle array or map index assignment (e.g., `arr[2] = 10` or `map["key"] = 20`)
+		else if (currentToken.type == TokenType::LBRACKET) {
+			// Parse array or map indexing (like `arr[2]`)
+			eat(TokenType::LBRACKET);
+			ASTNode* indexExpr = parseExpression();  // Index or key
+			eat(TokenType::RBRACKET);
+
+			// Expect an assignment to this indexed value (e.g., `arr[2] = 10`)
+			if (currentToken.type == TokenType::ASSIGN) {
+				eat(TokenType::ASSIGN);
+				ASTNode* valueExpr = parseExpression();
+				eat(TokenType::SEMICOLON);
+				return new AssignmentNode(identifier, indexExpr, valueExpr);  // AssignmentNode for array/map element assignment
+			}
 		}
 		else if (currentToken.type == TokenType::LPAREN) {
 			// Function call statement
@@ -72,6 +95,7 @@ ASTNode* Parser::parseStatement() {
 		eat(TokenType::SEMICOLON);
 		return new ReturnNode(expr);
 	}
+
 	else if (currentToken.type == TokenType::IF) {
 		// If statement
 		return parseIfStatement();
@@ -97,6 +121,11 @@ ASTNode* Parser::parseStatement() {
 		}
 		eat(TokenType::RBRACE);
 		return new BlockNode(bodyStatements);
+	}
+	else if (currentToken.type == TokenType::IMPORT)
+	{
+		eat(TokenType::IMPORT);
+		return nullptr;
 	}
 	// Throw an error for an unrecognized token
 	throw std::runtime_error("Unexpected token in statement: " + tokenToString(currentToken));
@@ -249,9 +278,22 @@ ASTNode* Parser::parseDeclaration() {
 	eat(TokenType::IDENTIFIER);
 
 	ASTNode* initializer = nullptr;
+	// Handle the initialization part if present
 	if (currentToken.type == TokenType::ASSIGN) {
 		eat(TokenType::ASSIGN);
-		initializer = parseExpression();
+
+		if (type == ValueType::ARRAY) {
+			// Expecting an array literal to initialize the array variable
+			initializer = parseArrayLiteral();
+		}
+		else if (type == ValueType::MAP) {
+			// Expecting a map literal to initialize the map variable
+			initializer = parseMapLiteral();
+		}
+		else {
+			// For scalar variables, parse the normal initializer expression
+			initializer = parseExpression();
+		}
 	}
 	if (currentToken.type == TokenType::SEMICOLON) {
 		eat(TokenType::SEMICOLON);
@@ -436,19 +478,31 @@ ASTNode* Parser::parsePrimary() {
 	switch (currentToken.type) {
 	case TokenType::NUMBER: {
 		double value = currentToken.numberValue;
-		std::cout << "parsePrimary: Creating NumberNode with value: " << value << std::endl;
 		eat(TokenType::NUMBER);
+		std::cout << "parsePrimary: Creating NumberNode with value: " << value << std::endl;
 		return new NumberNode(value);
 	}
 	case TokenType::STRING_LITERAL: {
 		std::string value = currentToken.stringValue;
-		std::cout << "parsePrimary: Creating StringNode with value: " << value << std::endl;
 		eat(TokenType::STRING_LITERAL);
+
+		std::cout << "parsePrimary: Creating StringNode with value: " << value << std::endl;
 		return new StringNode(value);
 	}
 	case TokenType::IDENTIFIER: {
 		std::string name = currentToken.stringValue;
 		eat(TokenType::IDENTIFIER);
+
+		if (currentToken.type == TokenType::LBRACKET) {
+			// Handle map or array indexing
+			eat(TokenType::LBRACKET);
+			std::cout << "parsePrimary: Creating IndexNode with value: " << name << std::endl;
+			ASTNode* index = parseExpression();
+			eat(TokenType::RBRACKET);
+			eat(TokenType::SEMICOLON);
+			return new IndexNode(name, index);  // Create IndexNode for indexing into arrays or maps
+
+		}
 
 		if (currentToken.type == TokenType::LPAREN) {
 			std::cout << "parsePrimary: Parsing function call with name: " << name << std::endl;
@@ -476,9 +530,67 @@ ASTNode* Parser::parsePrimary() {
 		std::cout << "parsePrimary: Creating BooleanNode with value: false" << std::endl;
 		return new BooleanNode(false);
 	}
+	case TokenType::LBRACE: {
+		return parseMapLiteral();
+	}
+	case TokenType::LBRACKET: {
+		return parseArrayLiteral();
+	}
 	default:
 		throw std::runtime_error("Unexpected token in primary");
 	}
+}
+
+ASTNode* Parser::parseMapLiteral()
+{
+	eat(TokenType::LBRACE);
+	std::unordered_map<std::string, ASTNode*> elements;
+
+	// Parse key-value pairs
+	while (currentToken.type != TokenType::RBRACE) {
+		ASTNode* keyNode = parseExpression();
+
+		if (auto keyStr = dynamic_cast<StringNode*>(keyNode)) {
+			std::string key = keyStr->value;
+			eat(TokenType::COLON);
+			ASTNode* valueNode = parseExpression();
+			elements[key] = valueNode;
+
+			if (currentToken.type == TokenType::COMMA) {
+				eat(TokenType::COMMA);
+			}
+			else {
+				break;
+			}
+		}
+		else {
+			throw std::runtime_error("Map keys must be strings.");
+		}
+	}
+
+	eat(TokenType::RBRACE);
+	return new MapNode(elements);
+}
+
+ASTNode* Parser::parseArrayLiteral()
+{
+	eat(TokenType::LBRACKET);
+	std::vector<ASTNode*> elements;
+
+	// Parse elements separated by commas
+	while (currentToken.type != TokenType::RBRACKET) {
+		elements.push_back(parseExpression());
+
+		if (currentToken.type == TokenType::COMMA) {
+			eat(TokenType::COMMA);
+		}
+		else {
+			break;
+		}
+	}
+
+	eat(TokenType::RBRACKET);
+	return new ArrayNode(elements);
 }
 
 
@@ -502,6 +614,14 @@ ValueType Parser::parseType() {
 	else if (currentToken.type == TokenType::VOID_TYPE) {
 		eat(TokenType::VOID_TYPE);
 		return ValueType::VOID_TYPE;
+	}
+	else if (currentToken.type == TokenType::ARRAY) {
+		eat(TokenType::ARRAY);
+		return ValueType::ARRAY;
+	}
+	else if (currentToken.type == TokenType::MAP) {
+		eat(TokenType::MAP);
+		return ValueType::MAP;
 	}
 
 	throw std::runtime_error("Expected type declaration");
@@ -528,6 +648,11 @@ std::string Parser::tokenToString(const Token& token) {
 	case TokenType::RPAREN: return "RPAREN ())";
 	case TokenType::LBRACE: return "LBRACE ({)";
 	case TokenType::RBRACE: return "RBRACE (})";
+	case TokenType::RBRACKET: return "RBRACE (])";
+	case TokenType::LBRACKET: return "RBRACE ([)";
+	case TokenType::COLON: return "RBRACE (:)";
+	case TokenType::MAP: return "MAP";
+	case TokenType::ARRAY: return "ARRAY";
 	case TokenType::SEMICOLON: return "SEMICOLON (;)";
 	case TokenType::PLUS: return "PLUS (+)";
 	case TokenType::MINUS: return "MINUS (-)";
@@ -540,6 +665,7 @@ std::string Parser::tokenToString(const Token& token) {
 	case TokenType::LESS: return "LESS (<)";
 	case TokenType::GREATER_EQUALS: return "GREATER EQUALS (>=)";
 	case TokenType::LESS_EQUALS: return "LESS EQUALS (<=)";
+	case TokenType::IMPORT: return "#IMPORT";
 	default: return "UNKNOWN TOKEN";
 	}
 }

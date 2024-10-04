@@ -23,9 +23,9 @@ void Environment::registerUserFunction(const std::string& name, ASTNode* functio
 	userFunctionRegistry[name] = functionNode;
 }
 
-VariableValue Environment::evaluateFunction(const std::string& name, const std::vector<VariableValue>& args) {
+VariableValue Environment::evaluateFunction(const std::string& name,const std::vector<VariableValue>& args,const std::vector<std::string>& argumentsNames) {
 	if (functionRegistry.contains(name)) {
-		return functionRegistry.at(name)(args);
+		return functionRegistry.at(name)(args, argumentsNames, *this);
 	}
 
 	if (userFunctionRegistry.contains(name)) {
@@ -51,7 +51,7 @@ VariableValue Environment::evaluateFunction(const std::string& name, const std::
 		}
 
 		// Execute the function body
-		VariableValue returnValue = functionNode->body->evaluate(*this);;
+		VariableValue returnValue = functionNode->body->evaluate(*this);
 
 
 		// Remove the local scope after the function completes
@@ -70,36 +70,60 @@ void Environment::declareVariable(const std::string& name, ValueType type) {
 	if (variableScopes.back().contains(name)) {
 		throw std::runtime_error("Variable already declared: " + name);
 	}
-	VariableValue defaultValue;
 
+	VariableValue defaultValue;
 	switch (type) {
-	case ValueType::INT: defaultValue = 0.0; break;
-	case ValueType::FLOAT: defaultValue = 0.0; break;
-	case ValueType::BOOL: defaultValue = false; break;
-	case ValueType::STRING: defaultValue = ""; break;
-	default: throw std::runtime_error("Unsupported variable type for declaration.");
+	case ValueType::INT:
+	case ValueType::FLOAT:
+		defaultValue = VariableValue(0.0);
+		break;
+	case ValueType::BOOL:
+		defaultValue = VariableValue(false);
+		break;
+	case ValueType::STRING:
+		defaultValue = VariableValue("");
+		break;
+	case ValueType::ARRAY:
+		defaultValue = VariableValue(std::vector<VariableValue>());  // Default to an empty array
+		break;
+	case ValueType::MAP:
+		defaultValue = VariableValue(std::unordered_map<std::string, VariableValue>());  // Default to an empty map
+		break;
+	default:
+		throw std::runtime_error("Unsupported variable type for declaration.");
 	}
 
-	variableScopes.back()[name] = std::make_pair(defaultValue, type);
+	variableTable[name] = std::make_pair(defaultValue, type);
 }
 
 void Environment::setVariable(const std::string& name, const VariableValue& value) {
+	
 	for (auto scope = variableScopes.rbegin(); scope != variableScopes.rend(); ++scope) {
 		if (scope->contains(name)) {
 			scope->at(name).first = value;
 			return;
 		}
 	}
+	//if not in scope then global
+	if (variableTable.contains(name)) {
+		variableTable.at(name).first = value;
+		return;
+	}
 	throw std::runtime_error("Undefined variable: " + name);
 }
 
 // Get a variable's value
-VariableValue Environment::getVariable(const std::string& name) const {
+VariableValue Environment::getVariable(const std::string& name) {
 	for (auto scope = variableScopes.rbegin(); scope != variableScopes.rend(); ++scope) {
 		if (scope->contains(name)) {
 			return scope->at(name).first;
 		}
 	}
+	//if not in scope then global
+	if (variableTable.contains(name)) {
+		return variableTable.at(name).first;
+	}
+
 	throw std::runtime_error("Undefined variable: " + name);
 }
 
