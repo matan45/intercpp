@@ -23,7 +23,7 @@ void Environment::registerUserFunction(const std::string& name, ASTNode* functio
 	userFunctionRegistry[name] = functionNode;
 }
 
-VariableValue Environment::evaluateFunction(const std::string& name,const std::vector<VariableValue>& args,const std::vector<std::string>& argumentsNames) {
+VariableValue Environment::evaluateFunction(const std::string& name, const std::vector<VariableValue>& args, const std::vector<std::string>& argumentsNames) {
 	if (functionRegistry.contains(name)) {
 		return functionRegistry.at(name)(args, argumentsNames, *this);
 	}
@@ -46,7 +46,22 @@ VariableValue Environment::evaluateFunction(const std::string& name,const std::v
 		// Assign arguments to the parameters in the new scope
 		for (size_t i = 0; i < args.size(); ++i) {
 			const auto& param = functionNode->parameters[i];
-			declareVariable(param.first, param.second);
+			const ValueType paramType = param.second;
+
+			if (paramType == ValueType::CLASS) {
+				// If the parameter is of type CLASS, use the corresponding class name
+				const std::string& paramClassName = functionNode->parameterClassNames[i];
+				if (paramClassName.empty()) {
+					throw std::runtime_error("Missing class name for parameter '" + param.first + "' in function '" + functionNode->name + "'");
+				}
+				declareVariable(param.first, paramType, paramClassName);
+			}
+			else {
+				// For non-class types, declare the variable as usual
+				declareVariable(param.first, paramType);
+			}
+
+			// Set the value of the parameter in the environment
 			setVariable(param.first, args[i]);
 		}
 
@@ -71,66 +86,60 @@ void Environment::registerClass(const std::string& name, ClassDefinitionNode* cl
 	classRegistry[name] = classDef;
 }
 
-VariableValue Environment::instantiateObject(const std::string& className, const std::vector<ASTNode*>& args)
-{
-	// Check if the class is defined in the registry
+VariableValue Environment::instantiateObject(const std::string& className, const std::vector<ASTNode*>& args) {
 	if (!classRegistry.contains(className)) {
-		throw std::runtime_error("Undefined class: " + className);
-	}
+        throw std::runtime_error("Undefined class: " + className);
+    }
 
-	// Get the class definition from the registry
-	ClassDefinitionNode* classDef = classRegistry.at(className);
-	std::unordered_map<std::string, VariableValue> objectMembers;
+    ClassDefinitionNode* classDef = classRegistry.at(className);
+    std::unordered_map<std::string, VariableValue> memberScope;
 
-	// Initialize member variables
-	for (const auto& [memberName, memberNode] : classDef->members) {
-		if (auto declNode = dynamic_cast<DeclarationNode*>(memberNode)) {
-			// Evaluate the member variable to initialize it
-			objectMembers[memberName] = declNode->evaluate(*this);
-		}
-	}
+    // Initialize member variables with default values
+    for (const auto& [memberName, memberNode] : classDef->members) {
+        if (auto declNode = dynamic_cast<DeclarationNode*>(memberNode)) {
+            memberScope[memberName] = declNode->evaluate(*this);
+        }
+    }
 
-	// Add member functions to the object
-	for (const auto& [memberName, memberNode] : classDef->members) {
-		if (auto funcNode = dynamic_cast<FunctionNode*>(memberNode)) {
-			// Store the function node as a callable member of the object
-			objectMembers[memberName] = VariableValue(funcNode);
-		}
-	}
+    // Create the object value with member variables
+    VariableValue objectValue(memberScope);
 
-	// Call constructor if it exists
-	if (classDef->constructor) {
-		// Evaluate constructor arguments
-		std::vector<VariableValue> evaluatedArgs;
-		for (ASTNode* arg : args) {
-			evaluatedArgs.push_back(arg->evaluate(*this));
-		}
+    // Handle constructor if it exists
+    if (classDef->constructor) {
+        std::vector<VariableValue> evaluatedArgs;
+        for (ASTNode* arg : args) {
+            evaluatedArgs.push_back(arg->evaluate(*this));
+        }
 
-		// Push a new scope for the constructor
-		pushScope();
+        // Use a new scope specifically for constructor parameters
+        pushScope();
 
-		// Set constructor parameters in the new scope
-		for (size_t i = 0; i < classDef->constructor->parameters.size(); ++i) {
-			const auto& param = classDef->constructor->parameters[i];
-			if (i < evaluatedArgs.size()) {
-				declareVariable(param.first, param.second);
-				setVariable(param.first, evaluatedArgs[i]);
-			}
-			else {
-				throw std::runtime_error("Insufficient arguments provided for constructor of class: " + className);
-			}
-		}
+        // Declare constructor parameters
+        for (size_t i = 0; i < classDef->constructor->parameters.size(); ++i) {
+            const auto& param = classDef->constructor->parameters[i];
+            declareVariable(param.first, param.second);
+            setVariable(param.first, evaluatedArgs[i]);
+        }
 
-		// Execute the constructor body
-		classDef->constructor->body->evaluate(*this);
+        // Set the current instance for member access
+        currentObjectInstance = memberScope;
 
-		// Pop the constructor scope
-		popScope();
-	}
+        // Evaluate constructor body, which may modify member variables
+        classDef->constructor->body->evaluate(*this);
 
-	// Return the created object, which now includes both variables and functions
-	return VariableValue(objectMembers); // Objects are represented as maps of their members
+        // Update member variables from the currentObjectInstance after constructor execution
+        memberScope = currentObjectInstance;
+
+        // Clear current instance after constructor execution
+        currentObjectInstance.clear();
+
+        popScope();
+    }
+
+    return VariableValue(memberScope);
 }
+
+
 
 bool Environment::isClassDefined(const std::string& identifier)
 {
@@ -140,12 +149,17 @@ bool Environment::isClassDefined(const std::string& identifier)
 
 
 // Declare a variable by name and type
-void Environment::declareVariable(const std::string& name, ValueType type) {
-	if (variableScopes.back().contains(name)) {
-		throw std::runtime_error("Variable already declared: " + name);
+void Environment::declareVariable(const std::string& name, ValueType type, const std::string& className) {
+	std::cout << "Declaring variable: " << name << " in ";
+	if (!variableScopes.empty()) {
+		std::cout << "local scope" << std::endl;
+	}
+	else {
+		std::cout << "global scope" << std::endl;
 	}
 
 	VariableValue defaultValue;
+
 	switch (type) {
 	case ValueType::INT:
 	case ValueType::FLOAT:
@@ -158,73 +172,85 @@ void Environment::declareVariable(const std::string& name, ValueType type) {
 		defaultValue = VariableValue("");
 		break;
 	case ValueType::ARRAY:
-		defaultValue = VariableValue(std::vector<VariableValue>());  // Default to an empty array
+		defaultValue = VariableValue(std::vector<VariableValue>());
 		break;
 	case ValueType::MAP:
-		defaultValue = VariableValue(std::unordered_map<std::string, VariableValue>());  // Default to an empty map
+		defaultValue = VariableValue(std::unordered_map<std::string, VariableValue>());
 		break;
+	case ValueType::CLASS: {
+		if (!classRegistry.contains(className)) {
+			throw std::runtime_error("Undefined class type for variable: " + className);
+		}
+		defaultValue = VariableValue(std::unordered_map<std::string, VariableValue>());
+		break;
+	}
 	default:
 		throw std::runtime_error("Unsupported variable type for declaration.");
 	}
 
-	variableTable[name] = std::make_pair(defaultValue, type);
+	// Add to the innermost scope (local) or global scope
+	if (!variableScopes.empty()) {
+		if (variableScopes.back().contains(name)) {
+			throw std::runtime_error("Variable already declared in current scope: " + name);
+		}
+		variableScopes.back()[name] = std::make_pair(defaultValue, type);
+	}
+	else {
+		if (variableTable.contains(name)) {
+			throw std::runtime_error("Variable already declared in global scope: " + name);
+		}
+		variableTable[name] = std::make_pair(defaultValue, type);
+	}
 }
 
 void Environment::setVariable(const std::string& name, const VariableValue& value) {
-	
+	// First, check if this variable is a class member in the current member scope
+	if (currentObjectInstance.contains(name)) {
+		currentObjectInstance[name] = value;
+		return;
+	}
+
+	// Traverse local scopes for the variable
 	for (auto scope = variableScopes.rbegin(); scope != variableScopes.rend(); ++scope) {
 		if (scope->contains(name)) {
 			scope->at(name).first = value;
 			return;
 		}
 	}
-	//if not in scope then global
+
+	// If no local scope has it, update it globally if it exists
 	if (variableTable.contains(name)) {
 		variableTable.at(name).first = value;
 		return;
 	}
-	throw std::runtime_error("Undefined variable: " + name);
+	throw std::runtime_error("Undefined variable: " + name + ". Cannot assign value.");
+
 }
+
 
 void Environment::declareObject(const std::string& className, const std::string& objectName)
 {
-	// Check if the class is defined in the registry
 	if (!classRegistry.contains(className)) {
 		throw std::runtime_error("Undefined class: " + className);
 	}
 
-	// Get the class definition
 	ClassDefinitionNode* classDef = classRegistry.at(className);
+	std::unordered_map<std::string, VariableValue> memberScope;
 
-	// Initialize the members of the object based on the class definition
-	std::unordered_map<std::string, VariableValue> objectMembers;
-
-	// Add member variables
 	for (const auto& [memberName, memberNode] : classDef->members) {
 		if (auto declNode = dynamic_cast<DeclarationNode*>(memberNode)) {
-			// Evaluate the declaration to get the initial value
-			VariableValue initialValue = declNode->evaluate(*this);
-			objectMembers[memberName] = initialValue;
+			memberScope[memberName] = declNode->evaluate(*this);
 		}
 	}
 
-	// Add member functions
-	for (const auto& [memberName, memberNode] : classDef->members) {
-		if (auto funcNode = dynamic_cast<FunctionNode*>(memberNode)) {
-			// Store function pointers or function nodes directly in the object map
-			objectMembers[memberName] = VariableValue(funcNode);
-		}
+	VariableValue objectValue(memberScope);
+
+	if (!variableScopes.empty()) {
+		variableScopes.back()[objectName] = std::make_pair(objectValue, ValueType::CLASS);
 	}
-
-	// Create a VariableValue to represent the object (use a map to store its members)
-	VariableValue objectValue(objectMembers);
-
-	// Add the new object to the current scope
-	if (variableScopes.empty()) {
-		throw std::runtime_error("No active scope to declare object in.");
+	else {
+		variableTable[objectName] = std::make_pair(objectValue, ValueType::CLASS);
 	}
-
-	variableScopes.back()[objectName] = std::make_pair(objectValue, ValueType::MAP);
 }
 
 bool Environment::isVariableDeclared(const std::string& name)
@@ -248,62 +274,64 @@ bool Environment::isMemberFunction(const std::unordered_map<std::string, Variabl
 	return false;
 }
 
-VariableValue Environment::callMemberFunction(const std::unordered_map<std::string, VariableValue>& objMap, const std::string& methodName, const std::vector<VariableValue>& args)
-{
-	// Check if the object has the method
-	auto it = objMap.find(methodName);
-	if (it == objMap.end()) {
+// Call a member function
+VariableValue Environment::callMemberFunction(const std::unordered_map<std::string, VariableValue>& objMap, const std::string& methodName, const std::vector<VariableValue>& args) {
+	if (!objMap.contains(methodName)) {
 		throw std::runtime_error("Undefined member function: " + methodName);
 	}
 
 	// Ensure the member is a function
-	FunctionNode* functionNode = std::get<FunctionNode*>(it->second.value);
+	FunctionNode* functionNode = std::get<FunctionNode*>(objMap.at(methodName).value);
 	if (!functionNode) {
 		throw std::runtime_error("Member " + methodName + " is not callable.");
 	}
 
-	// Create a new scope for the function call
+	// Create a new scope for the function call and push the member scope
 	pushScope();
+	currentObjectInstance = objMap;
 
-	// Assign arguments to function parameters in the new scope
+	// Declare function arguments in the new scope
 	for (size_t i = 0; i < functionNode->parameters.size(); ++i) {
 		const auto& param = functionNode->parameters[i];
-		if (i < args.size()) {
-			declareVariable(param.first, param.second);
-			setVariable(param.first, args[i]);
-		}
-		else {
-			throw std::runtime_error("Insufficient arguments provided for function: " + methodName);
-		}
+		declareVariable(param.first, param.second);
+		setVariable(param.first, args[i]);
 	}
 
 	// Execute the function body
 	VariableValue returnValue = functionNode->body->evaluate(*this);
 
-	// Pop the function scope
+	// Pop the function scope and clear the member scope
 	popScope();
+	currentObjectInstance.clear();
 
 	return returnValue;
 }
 
 // Get a variable's value
 VariableValue Environment::getVariable(const std::string& name) {
+	std::cout << "Getting variable: " << name << std::endl;
+	// Check if we are accessing a class member in the current object instance
+	if (currentObjectInstance.contains(name)) {
+		return currentObjectInstance.at(name);
+	}
+
+	// Traverse from innermost (local) to outermost (global) scope
 	for (auto scope = variableScopes.rbegin(); scope != variableScopes.rend(); ++scope) {
 		if (scope->contains(name)) {
 			return scope->at(name).first;
 		}
 	}
-	//if not in scope then global
+
+	// Lastly, check the global scope
 	if (variableTable.contains(name)) {
 		return variableTable.at(name).first;
 	}
-
 	throw std::runtime_error("Undefined variable: " + name);
 }
 
 void Environment::pushScope()
 {
-
 	variableScopes.emplace_back();
+	std::cout << "Environment: Pushed a new scope." << std::endl;
 
 }

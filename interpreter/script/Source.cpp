@@ -726,10 +726,18 @@ int test13() {
     }
 }
 
-	MyClass obj = new MyClass(10);
-    obj.setValue(20);
-    int x = obj.getValue();
-	print(x);
+func MyClass processObject(MyClass inputObj) {
+	int val = inputObj.getValue();
+	int x = val + 10;
+    MyClass newObj = new MyClass(x);
+    return newObj;
+}
+
+	MyClass obj = new MyClass(20);
+    MyClass result;
+	result = processObject(obj);
+    int finalValue = obj.getValue();
+    print(finalValue); // Should print 30
 
     )";
 

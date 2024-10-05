@@ -23,7 +23,8 @@ private:
 	std::unordered_map<std::string, ClassDefinitionNode*> classRegistry;
 	std::unordered_map<std::string, std::pair<VariableValue, ValueType>> variableTable;
 	std::vector<std::unordered_map<std::string, std::pair<VariableValue, ValueType>>> variableScopes;
-
+	// Member scope for the currently active object (used during method calls)
+	std::unordered_map<std::string, VariableValue> currentObjectInstance;
 public:
 	explicit Environment();
 	~Environment() = default;
@@ -43,7 +44,7 @@ public:
 	bool isClassDefined(const std::string& identifier);
 
 	// Declare a variable by name and type
-	void declareVariable(const std::string& name, ValueType type);
+	void declareVariable(const std::string& name, ValueType type, const std::string& className = "");
 
 	void setVariable(const std::string& name, const VariableValue& value);
 
@@ -60,10 +61,13 @@ public:
 
 	// Remove the current scope (for exiting a function)
 	void popScope() {
-		if (variableScopes.size() <= 1) {
-			throw std::runtime_error("Cannot pop the global scope.");
+		if (!variableScopes.empty()) {
+			variableScopes.pop_back();
+			std::cout << "Environment: Popped the current scope." << std::endl;
 		}
-		variableScopes.pop_back();
+		else {
+			throw std::runtime_error("Environment: Attempt to pop scope when no scope exists.");
+		}
 	}
 	
 };

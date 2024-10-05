@@ -71,7 +71,7 @@ private:
 	FunctionNode* parseFunctionDefinitionWithoutName(const std::string& className);
 	FunctionNode* parseFunctionDefinitionWithoutTokenFUNC();
 
-	ValueType parseType();
+	std::pair<ValueType, std::string> parseType();
 	bool isClassType(const std::string& identifier);
 	bool isType(TokenType type);
 

@@ -328,10 +328,12 @@ IfNode::~IfNode() {
 }
 
 VariableValue ReturnNode::evaluate(Environment& env) {
+	// Evaluate the return value expression
 	VariableValue result = returnValue->evaluate(env);
 
 	// Determine the type of result and print it accordingly
 	std::cout << "ReturnNode: Returning value ";
+
 	if (auto doublePtr = std::get_if<double>(&result.value)) {
 		std::cout << *doublePtr << std::endl;
 	}
@@ -341,12 +343,41 @@ VariableValue ReturnNode::evaluate(Environment& env) {
 	else if (auto strPtr = std::get_if<std::string>(&result.value)) {
 		std::cout << *strPtr << std::endl;
 	}
+	else if (auto arrayPtr = std::get_if<std::vector<VariableValue>>(&result.value)) {
+		std::cout << "Array [";
+		for (size_t i = 0; i < arrayPtr->size(); ++i) {
+			if (i > 0) std::cout << ", ";
+			std::cout << (*arrayPtr)[i].toString();  // Assuming VariableValue has a toString() method
+		}
+		std::cout << "]" << std::endl;
+	}
+	else if (auto mapPtr = std::get_if<std::unordered_map<std::string, VariableValue>>(&result.value)) {
+		std::cout << "Map {";
+		bool first = true;
+		for (const auto& [key, value] : *mapPtr) {
+			if (!first) std::cout << ", ";
+			first = false;
+			std::cout << key << ": " << value.toString();  // Assuming VariableValue has a toString() method
+		}
+		std::cout << "}" << std::endl;
+	}
+	else if (auto classPtr = std::get_if<std::unordered_map<std::string, VariableValue>>(&result.value)) {
+		std::cout << "Class instance {";
+		bool first = true;
+		for (const auto& [memberName, memberValue] : *classPtr) {
+			if (!first) std::cout << ", ";
+			first = false;
+			std::cout << memberName << ": " << memberValue.toString();  // Assuming VariableValue has a toString() method
+		}
+		std::cout << "}" << std::endl;
+	}
 	else {
 		std::cout << "unknown type" << std::endl;
 	}
 
 	return result;
 }
+
 
 ReturnNode::~ReturnNode() {
 	delete returnValue;
@@ -388,46 +419,24 @@ FunctionNode::~FunctionNode() {
 }
 
 VariableValue DeclarationNode::evaluate(Environment& env) {
-	// Declare the variable in the current scope with a default value
-	VariableValue defaultValue;
-
-	switch (type) {
-	case ValueType::BOOL:
-		defaultValue.value = false;  // Boolean variables default to false
-		break;
-	case ValueType::INT:
-		defaultValue.value = 0.0;  // Integer variables default to 0
-		break;
-	case ValueType::FLOAT:
-		defaultValue.value = 0.0;  // Float variables also default to 0.0
-		break;
-	case ValueType::STRING:
-		defaultValue.value = "";  // String variables default to an empty string
-		break;
-	case ValueType::ARRAY:
-		defaultValue.value = std::vector<VariableValue>();  // Arrays default to an empty vector
-		break;
-	case ValueType::MAP:
-		defaultValue.value = std::unordered_map<std::string, VariableValue>();  // Maps default to an empty map
-		break;
-	default:
-		throw std::runtime_error("Unknown variable type for declaration: " + variableName);
+	// Step 1: Declare the variable in the environment, which initializes it with a default value.
+	if (type == ValueType::CLASS && !className.empty()) {
+		// Class type declaration, specify the class name for initialization
+		env.declareVariable(variableName, type, className);
+	}
+	else {
+		// Standard types like INT, FLOAT, STRING, etc.
+		env.declareVariable(variableName, type);
 	}
 
-	// Declare the variable in the environment
-	env.declareVariable(variableName, type);
-
-	// If there is an initializer, evaluate it and set the value in the environment
+	// Step 2: If there is an initializer, evaluate it and update the variable's value.
 	if (initializer) {
 		VariableValue value = initializer->evaluate(env);
 		env.setVariable(variableName, value);
 	}
-	else {
-		// Set the default value in the environment
-		env.setVariable(variableName, defaultValue);
-	}
 
-	return env.getVariable(variableName);  // Return the value of the declared variable
+	// Step 3: Return the current value of the declared variable.
+	return env.getVariable(variableName);
 }
 
 DeclarationNode::~DeclarationNode() {
@@ -485,39 +494,39 @@ AssignmentNode::~AssignmentNode() {
 }
 
 VariableValue VariableNode::evaluate(Environment& env) {
+	// Retrieve the variable's value from the environment
 	auto value = env.getVariable(name);
+
+	// Determine the type of the variable's value and handle each case accordingly
 	if (std::holds_alternative<double>(value.value)) {
 		double numValue = std::get<double>(value.value);
 		std::cout << "VariableNode: Retrieved numeric value " << numValue << " for variable " << name << std::endl;
-		return VariableValue(numValue);
+		return value; // Returning the original VariableValue instead of creating a new one
 	}
 	else if (std::holds_alternative<bool>(value.value)) {
 		bool boolValue = std::get<bool>(value.value);
 		std::cout << "VariableNode: Retrieved boolean value " << (boolValue ? "true" : "false") << " for variable " << name << std::endl;
-		return VariableValue(boolValue);
+		return value; // Returning the original VariableValue
 	}
-	// Handle string type: return a default value or throw an error
 	else if (std::holds_alternative<std::string>(value.value)) {
 		std::string strValue = std::get<std::string>(value.value);
 		std::cout << "VariableNode: Retrieved string value \"" << strValue << "\" for variable " << name << std::endl;
-		// Option 1: Return a default value such as 0.0
-		return VariableValue(strValue);
+		return value; // Returning the original VariableValue
 	}
-	// Handle array type (std::vector<VariableValue>)
-	if (auto vecPtr = std::get_if<std::vector<VariableValue>>(&value.value)) {
+	else if (auto vecPtr = std::get_if<std::vector<VariableValue>>(&value.value)) {
 		std::cout << "VariableNode: Retrieved array value of size " << vecPtr->size() << " for variable " << name << std::endl;
-		return VariableValue(*vecPtr);
+		return value; // Returning the original VariableValue
 	}
-
-	// Handle map type (std::unordered_map<std::string, VariableValue>)
-	if (auto mapPtr = std::get_if<std::unordered_map<std::string, VariableValue>>(&value.value)) {
+	else if (auto mapPtr = std::get_if<std::unordered_map<std::string, VariableValue>>(&value.value)) {
 		std::cout << "VariableNode: Retrieved map value with " << mapPtr->size() << " entries for variable " << name << std::endl;
-		return VariableValue(*mapPtr);
+		return value; // Returning the original VariableValue
 	}
 	else {
-		throw std::runtime_error("Expected numeric value for variable: " + name);
+		// Adding an explicit case for handling unknown types
+		throw std::runtime_error("Unexpected type for variable: " + name);
 	}
 }
+
 
 std::string VariableNode::getName() const
 {
@@ -603,7 +612,6 @@ VariableValue IndexNode::evaluate(Environment& env) {
 
 
 VariableValue ClassDefinitionNode::evaluate(Environment& env) {
-	env.registerClass(className, this);
 	return VariableValue(); // No return value for class definitions
 }
 

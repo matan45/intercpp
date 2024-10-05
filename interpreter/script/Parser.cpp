@@ -77,7 +77,9 @@ ASTNode* Parser::parseStatement() {
 			else {
 				// Regular assignment
 				ASTNode* valueExpr = parseExpression();
-				eat(TokenType::SEMICOLON);
+				if (currentToken.type == TokenType::SEMICOLON) {
+					eat(TokenType::SEMICOLON);
+				}
 				return new AssignmentNode(identifier, valueExpr);
 			}
 		}
@@ -145,8 +147,13 @@ ASTNode* Parser::parseStatement() {
 					return new ObjectDeclarationAssignmentNode(objectName, className, constructorArgs);
 				}
 				else {
-					throw std::runtime_error("Unexpected token after identifier: " + tokenToString(currentToken));
-
+					// Regular assignment
+					ASTNode* valueExpr = parseExpression();
+					if (currentToken.type == TokenType::SEMICOLON) {
+						eat(TokenType::SEMICOLON);
+					}
+					
+					return new AssignmentNode(objectName, valueExpr);
 				}
 			}
 
@@ -302,18 +309,20 @@ ASTNode* Parser::parseDoWhileStatement() {
 
 ASTNode* Parser::parseFunctionDefinition() {
 	eat(TokenType::FUNC);
-	ValueType returnType = parseType();
+	auto [returnType, returnClassName] = parseType();
 	std::string functionName = currentToken.stringValue;
 	eat(TokenType::IDENTIFIER);
 
 	eat(TokenType::LPAREN);
 	std::vector<std::pair<std::string, ValueType>> parameters;
+	std::vector<std::string> parameterClassNames;
 	if (currentToken.type != TokenType::RPAREN) {
 		do {
-			ValueType paramType = parseType();
+			auto [paramType, paramClassName] = parseType();
 			std::string paramName = currentToken.stringValue;
 			eat(TokenType::IDENTIFIER);
 			parameters.emplace_back(paramName, paramType);
+			parameterClassNames.push_back(paramType == ValueType::CLASS ? paramClassName : "");
 			if (currentToken.type == TokenType::COMMA) {
 				eat(TokenType::COMMA);
 			}
@@ -335,7 +344,7 @@ ASTNode* Parser::parseFunctionDefinition() {
 	// Create a BlockNode to represent the entire function body
 	ASTNode* body = new BlockNode(bodyStatements);
 
-	FunctionNode* functionNode = new FunctionNode(functionName, returnType, parameters, body);
+	FunctionNode* functionNode = new FunctionNode(functionName, returnType, parameters, body, parameterClassNames);
 	env.registerUserFunction(functionName, functionNode);
 	return functionNode;
 }
@@ -359,11 +368,15 @@ ASTNode* Parser::parseWhileStatement() {
 }
 
 ASTNode* Parser::parseDeclaration() {
-	ValueType type = parseType();
+	// Parse the type and class name if applicable
+	auto [type, className] = parseType();
+
+	// Parse the variable name
 	std::string variableName = currentToken.stringValue;
 	eat(TokenType::IDENTIFIER);
 
 	ASTNode* initializer = nullptr;
+
 	// Handle the initialization part if present
 	if (currentToken.type == TokenType::ASSIGN) {
 		eat(TokenType::ASSIGN);
@@ -381,11 +394,19 @@ ASTNode* Parser::parseDeclaration() {
 			initializer = parseExpression();
 		}
 	}
+
+	// Expect a semicolon to end the declaration
 	if (currentToken.type == TokenType::SEMICOLON) {
 		eat(TokenType::SEMICOLON);
 	}
-	return new DeclarationNode(variableName, type, initializer);
+	else {
+		throw std::runtime_error("Expected semicolon at the end of variable declaration");
+	}
+
+	// Create and return the DeclarationNode, including class name if the type is CLASS
+	return new DeclarationNode(variableName, type, initializer, className);
 }
+
 
 ASTNode* Parser::parseAssignment(const std::string& identifier) {
 	eat(TokenType::ASSIGN);
@@ -768,9 +789,10 @@ ASTNode* Parser::parseClassDefinition()
 	}
 
 	eat(TokenType::RBRACE);
-
+	ClassDefinitionNode* classNode = new ClassDefinitionNode(className, members, constructor);
+	env.registerClass(className, classNode);
 	// Create a new ClassDefinitionNode that contains all members and the constructor
-	return new ClassDefinitionNode(className, members, constructor);
+	return classNode;
 }
 
 ASTNode* Parser::parseObjectInstantiation()
@@ -841,7 +863,7 @@ FunctionNode* Parser::parseFunctionDefinitionWithoutName(const std::string& clas
 	std::vector<std::pair<std::string, ValueType>> parameters;
 	if (currentToken.type != TokenType::RPAREN) {
 		do {
-			ValueType paramType = parseType();
+			auto [paramType, returnClassName] = parseType();
 			std::string paramName = currentToken.stringValue;
 			eat(TokenType::IDENTIFIER);
 			parameters.emplace_back(paramName, paramType);
@@ -867,18 +889,21 @@ FunctionNode* Parser::parseFunctionDefinitionWithoutName(const std::string& clas
 
 FunctionNode* Parser::parseFunctionDefinitionWithoutTokenFUNC()
 {
-	ValueType returnType = parseType();
+	auto [returnType, returnClassName] = parseType();
 	std::string functionName = currentToken.stringValue;
 	eat(TokenType::IDENTIFIER);
 
 	eat(TokenType::LPAREN);
 	std::vector<std::pair<std::string, ValueType>> parameters;
+	std::vector<std::string> parameterClassNames;
 	if (currentToken.type != TokenType::RPAREN) {
 		do {
-			ValueType paramType = parseType();
+			auto [paramType, paramClassName] = parseType();
 			std::string paramName = currentToken.stringValue;
 			eat(TokenType::IDENTIFIER);
 			parameters.emplace_back(paramName, paramType);
+			parameterClassNames.push_back(paramType == ValueType::CLASS ? paramClassName : "");
+
 			if (currentToken.type == TokenType::COMMA) {
 				eat(TokenType::COMMA);
 			}
@@ -900,40 +925,48 @@ FunctionNode* Parser::parseFunctionDefinitionWithoutTokenFUNC()
 	// Create a BlockNode to represent the entire function body
 	ASTNode* body = new BlockNode(bodyStatements);
 
-	FunctionNode* functionNode = new FunctionNode(functionName, returnType, parameters, body);
+	FunctionNode* functionNode = new FunctionNode(functionName, returnType, parameters, body, parameterClassNames);
 	env.registerUserFunction(functionName, functionNode);
 	return functionNode;
 }
 
 
-ValueType Parser::parseType() {
+std::pair<ValueType, std::string> Parser::parseType() {
 	if (currentToken.type == TokenType::INT) {
 		eat(TokenType::INT);
-		return ValueType::INT;
+		return { ValueType::INT, "" };
 	}
 	else if (currentToken.type == TokenType::FLOAT) {
 		eat(TokenType::FLOAT);
-		return ValueType::FLOAT;
+		return { ValueType::FLOAT, "" };
 	}
 	else if (currentToken.type == TokenType::BOOL) {
 		eat(TokenType::BOOL);
-		return ValueType::BOOL;
+		return { ValueType::BOOL, "" };
 	}
 	else if (currentToken.type == TokenType::STRING_TYPE) {
 		eat(TokenType::STRING_TYPE);
-		return ValueType::STRING;
+		return { ValueType::STRING, "" };
 	}
 	else if (currentToken.type == TokenType::VOID_TYPE) {
 		eat(TokenType::VOID_TYPE);
-		return ValueType::VOID_TYPE;
+		return { ValueType::VOID_TYPE, "" };
 	}
 	else if (currentToken.type == TokenType::ARRAY) {
 		eat(TokenType::ARRAY);
-		return ValueType::ARRAY;
+		return { ValueType::ARRAY, "" };
 	}
 	else if (currentToken.type == TokenType::MAP) {
 		eat(TokenType::MAP);
-		return ValueType::MAP;
+		return { ValueType::MAP, "" };
+	}
+	else if (currentToken.type == TokenType::IDENTIFIER) {
+		// Check if the identifier is a class type
+		std::string typeName = currentToken.stringValue;
+		if (env.isClassDefined(typeName)) {
+			eat(TokenType::IDENTIFIER);
+			return { ValueType::CLASS, typeName };
+		}
 	}
 
 	throw std::runtime_error("Expected type declaration");

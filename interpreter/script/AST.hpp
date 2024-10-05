@@ -116,9 +116,10 @@ struct DeclarationNode : public ASTNode {
 	std::string variableName;
 	ValueType type;
 	ASTNode* initializer;
+	std::string className;      // Only used if type is ValueType::CLASS; name of the class type
 
-	explicit DeclarationNode(const std::string& variableName, ValueType type, ASTNode* initializer = nullptr)
-		: variableName(variableName), type(type), initializer(initializer) {}
+	explicit DeclarationNode(const std::string& variableName, ValueType type, ASTNode* initializer = nullptr, const std::string& className = "")
+		: variableName(variableName), type(type), initializer(initializer), className(className) {}
 
 	VariableValue evaluate(Environment& env) override;
 
@@ -162,10 +163,18 @@ struct FunctionNode : public ASTNode {
 	ValueType returnType;
 	std::vector<std::pair<std::string, ValueType>> parameters;
 	ASTNode* body;
+	std::vector<std::string> parameterClassNames;
 
 	explicit FunctionNode(const std::string& name, ValueType returnType,
-		const std::vector<std::pair<std::string, ValueType>>& parameters, ASTNode* body)
-		: name(name), returnType(returnType), parameters(parameters), body(body) {}
+		const std::vector<std::pair<std::string, ValueType>>& parameters,
+		ASTNode* body, 
+		const std::vector<std::string>& parameterClassNames = std::vector<std::string>())
+		: name(name),
+		returnType(returnType),
+		parameters(parameters),
+		body(body),
+		parameterClassNames(parameterClassNames)
+	{}
 
 	VariableValue evaluate(Environment& env) override;
 
