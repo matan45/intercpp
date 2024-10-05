@@ -337,5 +337,67 @@ struct MemberAccessNode : public ASTNode {
 	}
 };
 
+struct ObjectDeclarationNode : public ASTNode {
+	std::string className;
+	std::string objectName;
+
+	explicit ObjectDeclarationNode(const std::string& className, const std::string& objectName)
+		: className(className), objectName(objectName) {}
+
+	VariableValue evaluate(Environment& env) override;
+
+	~ObjectDeclarationNode() override = default;
+};
+
+struct ImportNode : public ASTNode {
+	ImportNode() = default;
+
+	VariableValue evaluate(Environment& env) override {
+		// Import nodes may perform no operations or handle including file logic
+		return VariableValue();
+	}
+
+	~ImportNode() override = default;
+};
+
+struct ObjectDeclarationAssignmentNode : public ASTNode {
+	std::string objectName;
+	std::string className;
+	std::vector<ASTNode*> constructorArgs;
+
+	explicit ObjectDeclarationAssignmentNode(const std::string& objectName, const std::string& className, const std::vector<ASTNode*>& args)
+		: objectName(objectName), className(className), constructorArgs(args) {}
+
+	VariableValue evaluate(Environment& env) override;
+
+	~ObjectDeclarationAssignmentNode() override {
+		for (ASTNode* arg : constructorArgs) {
+			delete arg;
+		}
+	}
+};
+
+struct MemberFunctionCallNode : public ASTNode {
+	ASTNode* object;
+	std::string methodName;
+	std::vector<ASTNode*> arguments;
+
+	explicit MemberFunctionCallNode(ASTNode* object, const std::string& methodName, const std::vector<ASTNode*>& args)
+		: object(object), methodName(methodName), arguments(args) {}
+
+	VariableValue evaluate(Environment& env) override;
+
+	~MemberFunctionCallNode() override {
+		delete object;
+		for (ASTNode* arg : arguments) {
+			delete arg;
+		}
+	}
+};
+
+
+
+
+
 
 

@@ -52,6 +52,8 @@ enum class ValueType {
 // Forward declare the struct
 struct VariableValue;
 class  Environment;
+// Forward declaration of FunctionNode
+struct FunctionNode;
 
 // Define an alias to the variant that includes possible value types
 using ValueVariant = std::variant<
@@ -59,7 +61,8 @@ using ValueVariant = std::variant<
 	bool,                                    // BOOL
 	std::string,                             // STRING
 	std::vector<VariableValue>,              // ARRAY: vector of VariableValue elements
-	std::unordered_map<std::string, VariableValue>  // MAP: unordered map with string keys
+	std::unordered_map<std::string, VariableValue> ,// MAP: unordered map with string keys
+	FunctionNode*  // Function pointer type (for member functions)
 >;
 
 struct VariableValue {

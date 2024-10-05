@@ -17,11 +17,8 @@ ASTNode* Parser::parseProgram() {
 	std::vector<ASTNode*> statements;
 	while (currentToken.type != TokenType::END) {
 		std::cout << tokenToString(currentToken) << std::endl;
-		ASTNode* node = parseStatement();
-		if (node) {
-			statements.push_back(node);
-		}
-		
+		statements.push_back(parseStatement());
+
 	}
 	return new ProgramNode(statements);
 }
@@ -48,8 +45,41 @@ ASTNode* Parser::parseStatement() {
 		std::string identifier = currentToken.stringValue;
 		eat(TokenType::IDENTIFIER);
 		if (currentToken.type == TokenType::ASSIGN) {
-			// Assignment statement
-			return parseAssignment(identifier);
+			// If this is an assignment
+			eat(TokenType::ASSIGN);
+
+			if (currentToken.type == TokenType::NEW) {
+				// Handle `MyClass obj = new MyClass(...)`
+				eat(TokenType::NEW);
+				std::string className = currentToken.stringValue;
+				eat(TokenType::IDENTIFIER);
+				eat(TokenType::LPAREN);
+				std::vector<ASTNode*> constructorArgs;
+
+				// Parse constructor arguments
+				if (currentToken.type != TokenType::RPAREN) {
+					do {
+						constructorArgs.push_back(parseExpression());
+						if (currentToken.type == TokenType::COMMA) {
+							eat(TokenType::COMMA);
+						}
+						else {
+							break;
+						}
+					} while (true);
+				}
+				eat(TokenType::RPAREN);
+				eat(TokenType::SEMICOLON);
+
+				// Create both the declaration and the instantiation
+				return new ObjectDeclarationAssignmentNode(identifier, className, constructorArgs);
+			}
+			else {
+				// Regular assignment
+				ASTNode* valueExpr = parseExpression();
+				eat(TokenType::SEMICOLON);
+				return new AssignmentNode(identifier, valueExpr);
+			}
 		}
 		// Handle array or map index assignment (e.g., `arr[2] = 10` or `map["key"] = 20`)
 		else if (currentToken.type == TokenType::LBRACKET) {
@@ -78,7 +108,48 @@ ASTNode* Parser::parseStatement() {
 			return new IncrementNode(op == TokenType::PLUSPLUS ? IncrementType::POSTFIX : IncrementType::POSTFIX, identifier);
 		}
 		else if (currentToken.type == TokenType::IDENTIFIER) {
-			// need to handle MyObject object;
+			std::string objectName = currentToken.stringValue;
+			eat(TokenType::IDENTIFIER);
+			if (currentToken.type == TokenType::SEMICOLON) {
+				eat(TokenType::SEMICOLON);
+				return new ObjectDeclarationNode(identifier, objectName);
+			}
+			else if (currentToken.type == TokenType::ASSIGN) {
+				// If this is an assignment
+				eat(TokenType::ASSIGN);
+
+				if (currentToken.type == TokenType::NEW) {
+					// Handle `MyClass obj = new MyClass(...)`
+					eat(TokenType::NEW);
+					std::string className = currentToken.stringValue;
+					eat(TokenType::IDENTIFIER);
+					eat(TokenType::LPAREN);
+					std::vector<ASTNode*> constructorArgs;
+
+					// Parse constructor arguments
+					if (currentToken.type != TokenType::RPAREN) {
+						do {
+							constructorArgs.push_back(parseExpression());
+							if (currentToken.type == TokenType::COMMA) {
+								eat(TokenType::COMMA);
+							}
+							else {
+								break;
+							}
+						} while (true);
+					}
+					eat(TokenType::RPAREN);
+					eat(TokenType::SEMICOLON);
+
+					// Create both the declaration and the instantiation
+					return new ObjectDeclarationAssignmentNode(objectName, className, constructorArgs);
+				}
+				else {
+					throw std::runtime_error("Unexpected token after identifier: " + tokenToString(currentToken));
+
+				}
+			}
+
 		}
 		else if (currentToken.type == TokenType::DOT) {
 			// Member access
@@ -140,7 +211,7 @@ ASTNode* Parser::parseStatement() {
 	else if (currentToken.type == TokenType::IMPORT)
 	{
 		eat(TokenType::IMPORT);
-		return nullptr; //create new empty node for that not return null
+		return new ImportNode(); //create new empty node for that not return null
 	}
 	// Throw an error for an unrecognized token
 	throw std::runtime_error("Unexpected token in statement: " + tokenToString(currentToken));
@@ -518,6 +589,43 @@ ASTNode* Parser::parsePrimary() {
 			return new IndexNode(name, index);  // Create IndexNode for indexing into arrays or maps
 
 		}
+		else if (currentToken.type == TokenType::DOT) {
+			ASTNode* primary = new VariableNode(name);  // By default, create a VariableNode
+			// Handle member access, like `obj.member` or `obj.method()`
+			eat(TokenType::DOT);
+			std::string memberName = currentToken.stringValue;
+			eat(TokenType::IDENTIFIER);
+
+			if (currentToken.type == TokenType::LPAREN) {
+				// Handle member function call (e.g., `obj.method()`)
+				eat(TokenType::LPAREN);
+				std::vector<ASTNode*> arguments;
+
+				// Parse arguments if present
+				if (currentToken.type != TokenType::RPAREN) {
+					do {
+						arguments.push_back(parseExpression());
+						if (currentToken.type == TokenType::COMMA) {
+							eat(TokenType::COMMA);
+						}
+						else {
+							break;
+						}
+					} while (true);
+				}
+				eat(TokenType::RPAREN);
+
+				// Create a MemberFunctionCallNode for the function call
+				std::cout << "parsePrimary: Creating MemberFunctionCallNode for object: " << name << ", method: " << memberName << std::endl;
+				primary = new MemberFunctionCallNode(primary, memberName, arguments);
+			}
+			else {
+				// Handle member variable access (e.g., `obj.value`)
+				std::cout << "parsePrimary: Creating MemberAccessNode for object: " << name << ", member: " << memberName << std::endl;
+				primary = new MemberAccessNode(primary, memberName);
+			}
+			return primary;
+		}
 
 		if (currentToken.type == TokenType::LPAREN) {
 			std::cout << "parsePrimary: Parsing function call with name: " << name << std::endl;
@@ -617,39 +725,52 @@ ASTNode* Parser::parseClassDefinition()
 	std::unordered_map<std::string, ASTNode*> members;
 	FunctionNode* constructor = nullptr;
 	eat(TokenType::LBRACE);
-
-	// Parse class members (variables, functions)
+	// Parse class members (variables, functions, constructor)
 	while (currentToken.type != TokenType::RBRACE) {
 		if (currentToken.type == TokenType::FUNC) {
 			eat(TokenType::FUNC);
+
 			if (currentToken.stringValue == className) {
 				// This is the constructor
+				std::cout << "parseClassDefinition: Parsing constructor for class: " << className << std::endl;
 				constructor = parseFunctionDefinitionWithoutName(className);
 			}
 			else {
 				// Regular member function
-				ASTNode* memberFunction = parseFunctionDefinition();
-				auto funcNode = dynamic_cast<FunctionNode*>(memberFunction);
-				if (funcNode) {
-					members[funcNode->name] = memberFunction;
+				FunctionNode* memberFunction = parseFunctionDefinitionWithoutTokenFUNC();
+				std::cout << "parseClassDefinition: Parsing member function: " << memberFunction->name << " for class: " << className << std::endl;
+
+				if (members.find(memberFunction->name) != members.end()) {
+					throw std::runtime_error("Member function name conflict in class: " + className + ", function: " + memberFunction->name);
 				}
-				
+
+				members[memberFunction->name] = memberFunction;
+			}
+		}
+		else if (isType(currentToken.type)) {
+			// Variable declaration (e.g., int memberVariable;)
+			ASTNode* member = parseDeclaration();
+			auto declNode = dynamic_cast<DeclarationNode*>(member);
+
+			if (declNode) {
+				std::cout << "parseClassDefinition: Parsing member variable: " << declNode->variableName << " for class: " << className << std::endl;
+
+				if (members.find(declNode->variableName) != members.end()) {
+					throw std::runtime_error("Member variable name conflict in class: " + className + ", variable: " + declNode->variableName);
+				}
+
+				members[declNode->variableName] = member;
 			}
 		}
 		else {
-			ASTNode* member = parseStatement();
-			if (member) {
-				// Assuming member names are unique; use a declaration node, for instance
-				auto declNode = dynamic_cast<DeclarationNode*>(member);
-				if (declNode) {
-					members[declNode->variableName] = member;
-				}
-			}
+			throw std::runtime_error("Unexpected token while parsing class definition: " + tokenToString(currentToken));
 		}
 	}
+
 	eat(TokenType::RBRACE);
 
-	return new ClassDefinitionNode(className, members);
+	// Create a new ClassDefinitionNode that contains all members and the constructor
+	return new ClassDefinitionNode(className, members, constructor);
 }
 
 ASTNode* Parser::parseObjectInstantiation()
@@ -682,11 +803,37 @@ ASTNode* Parser::parseMemberAccess(ASTNode* object)
 	eat(TokenType::DOT);
 	std::string memberName = currentToken.stringValue;
 	eat(TokenType::IDENTIFIER);
+	if (currentToken.type == TokenType::LPAREN) {
+		// Handle member function call
+		eat(TokenType::LPAREN);
+		std::vector<ASTNode*> arguments;
+
+		if (currentToken.type != TokenType::RPAREN) {
+			// Parse arguments if present
+			do {
+				arguments.push_back(parseExpression());
+				if (currentToken.type == TokenType::COMMA) {
+					eat(TokenType::COMMA);
+				}
+				else {
+					break;
+				}
+			} while (true);
+		}
+		eat(TokenType::RPAREN);
+		eat(TokenType::SEMICOLON);
+
+		// Return a node representing a member function call
+		return new MemberFunctionCallNode(object, memberName, arguments);
+	}
+	eat(TokenType::SEMICOLON);
 	return new MemberAccessNode(object, memberName);
 }
 
 FunctionNode* Parser::parseFunctionDefinitionWithoutName(const std::string& className)
 {
+
+	eat(TokenType::IDENTIFIER);
 	// Similar to parseFunctionDefinition, but uses className as the function name (for constructors)
 	ValueType returnType = ValueType::VOID_TYPE; // Typically `VOID_TYPE` for constructors
 	eat(TokenType::LPAREN);
@@ -716,6 +863,46 @@ FunctionNode* Parser::parseFunctionDefinitionWithoutName(const std::string& clas
 	eat(TokenType::RBRACE);
 
 	return new FunctionNode(className, returnType, parameters, new BlockNode(bodyStatements));
+}
+
+FunctionNode* Parser::parseFunctionDefinitionWithoutTokenFUNC()
+{
+	ValueType returnType = parseType();
+	std::string functionName = currentToken.stringValue;
+	eat(TokenType::IDENTIFIER);
+
+	eat(TokenType::LPAREN);
+	std::vector<std::pair<std::string, ValueType>> parameters;
+	if (currentToken.type != TokenType::RPAREN) {
+		do {
+			ValueType paramType = parseType();
+			std::string paramName = currentToken.stringValue;
+			eat(TokenType::IDENTIFIER);
+			parameters.emplace_back(paramName, paramType);
+			if (currentToken.type == TokenType::COMMA) {
+				eat(TokenType::COMMA);
+			}
+			else {
+				break;
+			}
+		} while (true);
+	}
+	eat(TokenType::RPAREN);
+
+	eat(TokenType::LBRACE);
+	// Parse the block of statements that make up the function body
+	std::vector<ASTNode*> bodyStatements;//also do to this in the if node and the loops
+	while (currentToken.type != TokenType::RBRACE) {
+		bodyStatements.push_back(parseStatement());
+	}
+	eat(TokenType::RBRACE);
+
+	// Create a BlockNode to represent the entire function body
+	ASTNode* body = new BlockNode(bodyStatements);
+
+	FunctionNode* functionNode = new FunctionNode(functionName, returnType, parameters, body);
+	env.registerUserFunction(functionName, functionNode);
+	return functionNode;
 }
 
 
@@ -750,6 +937,23 @@ ValueType Parser::parseType() {
 	}
 
 	throw std::runtime_error("Expected type declaration");
+}
+
+bool Parser::isClassType(const std::string& identifier)
+{
+	// This function checks if the identifier matches a class in the environment
+	return env.isClassDefined(identifier);
+}
+
+bool Parser::isType(TokenType type)
+{
+	// Check if the token type is one of the supported types
+	return type == TokenType::INT ||
+		type == TokenType::FLOAT ||
+		type == TokenType::BOOL ||
+		type == TokenType::STRING_TYPE ||
+		type == TokenType::ARRAY ||
+		type == TokenType::MAP;
 }
 
 std::string Parser::tokenToString(const Token& token) {
@@ -791,6 +995,9 @@ std::string Parser::tokenToString(const Token& token) {
 	case TokenType::GREATER_EQUALS: return "GREATER EQUALS (>=)";
 	case TokenType::LESS_EQUALS: return "LESS EQUALS (<=)";
 	case TokenType::IMPORT: return "#IMPORT";
+	case TokenType::DOT: return "DOT";
+	case TokenType::CLASS: return "CLASS";
+	case TokenType::NEW: return "NEW";
 	default: return "UNKNOWN TOKEN";
 	}
 }

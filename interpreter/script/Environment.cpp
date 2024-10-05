@@ -73,17 +73,28 @@ void Environment::registerClass(const std::string& name, ClassDefinitionNode* cl
 
 VariableValue Environment::instantiateObject(const std::string& className, const std::vector<ASTNode*>& args)
 {
+	// Check if the class is defined in the registry
 	if (!classRegistry.contains(className)) {
 		throw std::runtime_error("Undefined class: " + className);
 	}
 
-	 ClassDefinitionNode* classDef = classRegistry.at(className);
+	// Get the class definition from the registry
+	ClassDefinitionNode* classDef = classRegistry.at(className);
 	std::unordered_map<std::string, VariableValue> objectMembers;
 
 	// Initialize member variables
 	for (const auto& [memberName, memberNode] : classDef->members) {
 		if (auto declNode = dynamic_cast<DeclarationNode*>(memberNode)) {
+			// Evaluate the member variable to initialize it
 			objectMembers[memberName] = declNode->evaluate(*this);
+		}
+	}
+
+	// Add member functions to the object
+	for (const auto& [memberName, memberNode] : classDef->members) {
+		if (auto funcNode = dynamic_cast<FunctionNode*>(memberNode)) {
+			// Store the function node as a callable member of the object
+			objectMembers[memberName] = VariableValue(funcNode);
 		}
 	}
 
@@ -99,10 +110,15 @@ VariableValue Environment::instantiateObject(const std::string& className, const
 		pushScope();
 
 		// Set constructor parameters in the new scope
-		for (size_t i = 0; i < evaluatedArgs.size(); ++i) {
+		for (size_t i = 0; i < classDef->constructor->parameters.size(); ++i) {
 			const auto& param = classDef->constructor->parameters[i];
-			declareVariable(param.first, param.second);
-			setVariable(param.first, evaluatedArgs[i]);
+			if (i < evaluatedArgs.size()) {
+				declareVariable(param.first, param.second);
+				setVariable(param.first, evaluatedArgs[i]);
+			}
+			else {
+				throw std::runtime_error("Insufficient arguments provided for constructor of class: " + className);
+			}
 		}
 
 		// Execute the constructor body
@@ -112,9 +128,13 @@ VariableValue Environment::instantiateObject(const std::string& className, const
 		popScope();
 	}
 
-	// Evaluate constructor logic if needed (add your constructor logic here)
-
+	// Return the created object, which now includes both variables and functions
 	return VariableValue(objectMembers); // Objects are represented as maps of their members
+}
+
+bool Environment::isClassDefined(const std::string& identifier)
+{
+	return classRegistry.contains(identifier);
 }
 
 
@@ -164,6 +184,106 @@ void Environment::setVariable(const std::string& name, const VariableValue& valu
 		return;
 	}
 	throw std::runtime_error("Undefined variable: " + name);
+}
+
+void Environment::declareObject(const std::string& className, const std::string& objectName)
+{
+	// Check if the class is defined in the registry
+	if (!classRegistry.contains(className)) {
+		throw std::runtime_error("Undefined class: " + className);
+	}
+
+	// Get the class definition
+	ClassDefinitionNode* classDef = classRegistry.at(className);
+
+	// Initialize the members of the object based on the class definition
+	std::unordered_map<std::string, VariableValue> objectMembers;
+
+	// Add member variables
+	for (const auto& [memberName, memberNode] : classDef->members) {
+		if (auto declNode = dynamic_cast<DeclarationNode*>(memberNode)) {
+			// Evaluate the declaration to get the initial value
+			VariableValue initialValue = declNode->evaluate(*this);
+			objectMembers[memberName] = initialValue;
+		}
+	}
+
+	// Add member functions
+	for (const auto& [memberName, memberNode] : classDef->members) {
+		if (auto funcNode = dynamic_cast<FunctionNode*>(memberNode)) {
+			// Store function pointers or function nodes directly in the object map
+			objectMembers[memberName] = VariableValue(funcNode);
+		}
+	}
+
+	// Create a VariableValue to represent the object (use a map to store its members)
+	VariableValue objectValue(objectMembers);
+
+	// Add the new object to the current scope
+	if (variableScopes.empty()) {
+		throw std::runtime_error("No active scope to declare object in.");
+	}
+
+	variableScopes.back()[objectName] = std::make_pair(objectValue, ValueType::MAP);
+}
+
+bool Environment::isVariableDeclared(const std::string& name)
+{
+	// Check in the current scope if the variable is already declared
+	if (!variableScopes.empty()) {
+		const auto& currentScope = variableScopes.back();
+		return currentScope.find(name) != currentScope.end();
+	}
+	return false;
+}
+
+bool Environment::isMemberFunction(const std::unordered_map<std::string, VariableValue>& objMap, const std::string& methodName)
+{
+	// Check if the object contains the member and if it refers to a function
+	auto it = objMap.find(methodName);
+	if (it != objMap.end()) {
+		// Check if the value is a FunctionNode (which indicates it's callable)
+		return std::holds_alternative<FunctionNode*>(it->second.value);
+	}
+	return false;
+}
+
+VariableValue Environment::callMemberFunction(const std::unordered_map<std::string, VariableValue>& objMap, const std::string& methodName, const std::vector<VariableValue>& args)
+{
+	// Check if the object has the method
+	auto it = objMap.find(methodName);
+	if (it == objMap.end()) {
+		throw std::runtime_error("Undefined member function: " + methodName);
+	}
+
+	// Ensure the member is a function
+	FunctionNode* functionNode = std::get<FunctionNode*>(it->second.value);
+	if (!functionNode) {
+		throw std::runtime_error("Member " + methodName + " is not callable.");
+	}
+
+	// Create a new scope for the function call
+	pushScope();
+
+	// Assign arguments to function parameters in the new scope
+	for (size_t i = 0; i < functionNode->parameters.size(); ++i) {
+		const auto& param = functionNode->parameters[i];
+		if (i < args.size()) {
+			declareVariable(param.first, param.second);
+			setVariable(param.first, args[i]);
+		}
+		else {
+			throw std::runtime_error("Insufficient arguments provided for function: " + methodName);
+		}
+	}
+
+	// Execute the function body
+	VariableValue returnValue = functionNode->body->evaluate(*this);
+
+	// Pop the function scope
+	popScope();
+
+	return returnValue;
 }
 
 // Get a variable's value

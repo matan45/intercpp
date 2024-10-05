@@ -40,10 +40,17 @@ public:
 	void registerClass(const std::string& name, ClassDefinitionNode* classDef);
 	VariableValue instantiateObject(const std::string& className, const std::vector<ASTNode*>& args);
 
+	bool isClassDefined(const std::string& identifier);
+
 	// Declare a variable by name and type
 	void declareVariable(const std::string& name, ValueType type);
 
 	void setVariable(const std::string& name, const VariableValue& value);
+
+	void declareObject(const std::string& className, const std::string& objectName);
+	bool isVariableDeclared(const std::string& name);
+	bool isMemberFunction(const std::unordered_map<std::string, VariableValue>& objMap, const std::string& methodName);
+	VariableValue callMemberFunction(const std::unordered_map<std::string, VariableValue>& objMap, const std::string& methodName, const std::vector<VariableValue>& args);
 
 	// Get a variable's value
 	VariableValue getVariable(const std::string& name);

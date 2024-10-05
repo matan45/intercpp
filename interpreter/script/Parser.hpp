@@ -69,8 +69,11 @@ private:
 	ASTNode* parseObjectInstantiation();
 	ASTNode* parseMemberAccess(ASTNode* object);
 	FunctionNode* parseFunctionDefinitionWithoutName(const std::string& className);
+	FunctionNode* parseFunctionDefinitionWithoutTokenFUNC();
 
 	ValueType parseType();
+	bool isClassType(const std::string& identifier);
+	bool isType(TokenType type);
 
 	std::string tokenToString(const Token& token);
 };

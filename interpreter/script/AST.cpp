@@ -611,8 +611,40 @@ VariableValue ObjectInstantiationNode::evaluate(Environment& env) {
 	return env.instantiateObject(className, constructorArgs);
 }
 
+
+VariableValue ObjectDeclarationNode::evaluate(Environment& env) {
+	// Register the new object in the environment
+	env.declareObject(className, objectName);
+	return VariableValue(); // No return value for object declaration
+}
+
+VariableValue ObjectDeclarationAssignmentNode::evaluate(Environment& env) {
+	// Instantiate the object using the class definition and constructor arguments
+	VariableValue objectValue = env.instantiateObject(className, constructorArgs);
+
+	// Declare the object in the current scope
+	if (!env.isVariableDeclared(objectName)) {
+		// Declare a new object in the environment
+		env.declareVariable(objectName, ValueType::MAP);
+	}
+	else {
+		// Throw an error if the object has already been declared
+		throw std::runtime_error("Variable '" + objectName + "' is already declared in the current scope.");
+	}
+
+	// Set the value of the newly declared object
+	env.setVariable(objectName, objectValue);
+
+	return objectValue; // Return the newly created object value
+}
+
+
+
 VariableValue MemberAccessNode::evaluate(Environment& env) {
+	// Evaluate the object to get its value
 	VariableValue objValue = object->evaluate(env);
+
+	// Check if the object is a valid map (i.e., class instance)
 	if (auto objMap = std::get_if<std::unordered_map<std::string, VariableValue>>(&objValue.value)) {
 		if (objMap->contains(memberName)) {
 			return objMap->at(memberName);
@@ -622,4 +654,36 @@ VariableValue MemberAccessNode::evaluate(Environment& env) {
 		}
 	}
 	throw std::runtime_error("Attempt to access a member of a non-object value.");
+}
+
+VariableValue MemberFunctionCallNode::evaluate(Environment& env) {
+	// Evaluate the object to get its value
+	VariableValue objValue = object->evaluate(env);
+
+	// Check if the object is a valid map (i.e., class instance)
+	if (auto objMap = std::get_if<std::unordered_map<std::string, VariableValue>>(&objValue.value)) {
+		// Look for the method name in the object members
+		auto it = objMap->find(methodName);
+		if (it != objMap->end()) {
+			// Check if the member is indeed a function node
+			if (env.isMemberFunction(*objMap, methodName)) {
+				// Evaluate all arguments for the function call
+				std::vector<VariableValue> evaluatedArgs;
+				for (ASTNode* arg : arguments) {
+					evaluatedArgs.push_back(arg->evaluate(env));
+				}
+
+				// Call the member function
+				return env.callMemberFunction(*objMap, methodName, evaluatedArgs);
+			}
+			else {
+				throw std::runtime_error("Member \"" + methodName + "\" is not callable.");
+			}
+		}
+		else {
+			throw std::runtime_error("Member function not found: " + methodName);
+		}
+	}
+
+	throw std::runtime_error("Attempt to call a member function on a non-object value.");
 }
