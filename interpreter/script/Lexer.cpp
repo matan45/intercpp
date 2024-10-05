@@ -33,7 +33,7 @@ Token Lexer::getNextToken() {
 
 		// Tokenize numbers
 		if (isdigit(current)) {
-			if(current == '.')
+			if(current == '.') // need to fix this
 				continue;
 			return Token(TokenType::NUMBER, parseNumber());
 		}

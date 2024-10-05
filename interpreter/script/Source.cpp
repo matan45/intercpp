@@ -396,10 +396,15 @@ int test7() {
 int test8() {
 	Environment env;
 
+	// Register a built-in print function
+	env.registerFunction("print", print);
+
 	// Example script with for loop and do-while loop, which also includes a function definition.
 	std::string input = R"(
         func int multiply(int a, int b) {
-            return a * b;
+           int result = a * b;
+		   print(result);
+		   return result;
         }
     )";
 

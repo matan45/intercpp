@@ -125,7 +125,7 @@ ASTNode* Parser::parseStatement() {
 	else if (currentToken.type == TokenType::IMPORT)
 	{
 		eat(TokenType::IMPORT);
-		return nullptr;
+		return nullptr; //create new empty node for that not return null
 	}
 	// Throw an error for an unrecognized token
 	throw std::runtime_error("Unexpected token in statement: " + tokenToString(currentToken));
