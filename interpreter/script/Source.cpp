@@ -702,12 +702,58 @@ int test12() {
 	return 0;
 }
 
+int test13() {
+	Environment env;
+
+	// Register a built-in print function
+	env.registerFunction("print", print);
+
+	// Example script with for loop and do-while loop
+	std::string input = R"(
+		class MyClass {
+    int value;
+
+    func MyClass(int initialValue) {
+        value = initialValue; // Constructor
+    }
+
+    func void setValue(int newValue) {
+        value = newValue;
+    }
+
+    func int getValue() {
+        return value;
+    }
+}
+
+	MyClass obj = new MyClass(10);
+    obj.setValue(20);
+    int x = obj.getValue();
+	print(x);
+
+    )";
+
+	Lexer lexer(input);
+	Parser parser(lexer, env);
+
+	try {
+		ASTNode* root = parser.parse();
+		root->evaluate(env);
+		delete root;
+	}
+	catch (const std::exception& e) {
+		std::cerr << "Error: " << e.what() << std::endl;
+	}
+
+	return 0;
+}
+
 
 
 
 int main() {
 
- 	test1();
+ /*	test1();
  	test2();
  	test3();
  	test4();
@@ -718,7 +764,8 @@ int main() {
  	test9();
  	test10();
   	test11();
- 	test12();
+ 	test12();*/
+ 	test13();
 
 	// imports from other file need to test
 	// classes constructor new object method dot assignment destructor delete

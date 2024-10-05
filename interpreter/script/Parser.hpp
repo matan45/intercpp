@@ -65,6 +65,11 @@ private:
 	ASTNode* parseMapLiteral();
 	ASTNode* parseArrayLiteral();
 
+	ASTNode* parseClassDefinition();
+	ASTNode* parseObjectInstantiation();
+	ASTNode* parseMemberAccess(ASTNode* object);
+	FunctionNode* parseFunctionDefinitionWithoutName(const std::string& className);
+
 	ValueType parseType();
 
 	std::string tokenToString(const Token& token);

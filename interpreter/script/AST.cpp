@@ -600,3 +600,26 @@ VariableValue IndexNode::evaluate(Environment& env) {
 	// If the container is neither an array nor a map, throw an error
 	throw std::runtime_error("Attempted to index a non-container variable: " + variableName);
 }
+
+
+VariableValue ClassDefinitionNode::evaluate(Environment& env) {
+	env.registerClass(className, this);
+	return VariableValue(); // No return value for class definitions
+}
+
+VariableValue ObjectInstantiationNode::evaluate(Environment& env) {
+	return env.instantiateObject(className, constructorArgs);
+}
+
+VariableValue MemberAccessNode::evaluate(Environment& env) {
+	VariableValue objValue = object->evaluate(env);
+	if (auto objMap = std::get_if<std::unordered_map<std::string, VariableValue>>(&objValue.value)) {
+		if (objMap->contains(memberName)) {
+			return objMap->at(memberName);
+		}
+		else {
+			throw std::runtime_error("Member not found: " + memberName);
+		}
+	}
+	throw std::runtime_error("Attempt to access a member of a non-object value.");
+}

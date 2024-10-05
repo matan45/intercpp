@@ -12,7 +12,7 @@ class Environment;
 // Base class for all AST nodes
 struct ASTNode {
 	virtual ~ASTNode() = default;
-	virtual VariableValue evaluate(Environment& env) = 0;
+	virtual VariableValue evaluate(Environment& env) = 0; // can return the const here
 };
 
 // Program Node: Represents a collection of statements
@@ -288,6 +288,54 @@ struct IndexNode : public ASTNode {
 };
 
 
+struct ClassDefinitionNode : public ASTNode {
+	std::string className;
+	std::unordered_map<std::string, ASTNode*> members;
+	FunctionNode* constructor; // Optional constructor
+
+	explicit ClassDefinitionNode(const std::string& className, const std::unordered_map<std::string, ASTNode*>& members, FunctionNode* constructor = nullptr)
+		: className(className), members(members), constructor(constructor) {}
+
+	VariableValue evaluate(Environment& env);
+
+	~ClassDefinitionNode() override {
+		for (auto& [_, member] : members) {
+			delete member;
+		}
+	}
+};
+
+
+struct ObjectInstantiationNode : public ASTNode {
+	std::string className;
+	std::vector<ASTNode*> constructorArgs;
+
+	explicit ObjectInstantiationNode(const std::string& className, const std::vector<ASTNode*>& args)
+		: className(className), constructorArgs(args) {}
+
+	VariableValue evaluate(Environment& env) override;
+
+	~ObjectInstantiationNode() override {
+		for (ASTNode* arg : constructorArgs) {
+			delete arg;
+		}
+	}
+};
+
+
+struct MemberAccessNode : public ASTNode {
+	ASTNode* object;
+	std::string memberName;
+
+	explicit MemberAccessNode(ASTNode* object, const std::string& memberName)
+		: object(object), memberName(memberName) {}
+
+	VariableValue evaluate(Environment& env) override;
+
+	~MemberAccessNode() override {
+		delete object;
+	}
+};
 
 
 

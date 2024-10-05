@@ -31,10 +31,8 @@ Token Lexer::getNextToken() {
 			continue;
 		}
 
-		// Tokenize numbers
+		// Tokenize numbers need to handle a case of 0.54
 		if (isdigit(current)) {
-			if(current == '.') // need to fix this
-				continue;
 			return Token(TokenType::NUMBER, parseNumber());
 		}
 
@@ -57,6 +55,12 @@ Token Lexer::getNextToken() {
 			}
 			if (word == "map") {
 				return Token(TokenType::MAP);
+			}
+			if (word == "class") {
+				return Token(TokenType::CLASS);
+			}
+			else if (word == "new") {
+				return Token(TokenType::NEW);
 			}
 			else if (word == "func") {
 				return Token(TokenType::FUNC);
@@ -188,6 +192,7 @@ Token Lexer::getNextToken() {
 		case ':': ++pos; return Token(TokenType::COLON);
 		case '[': ++pos; return Token(TokenType::LBRACKET);
 		case ']': ++pos; return Token(TokenType::RBRACKET);
+		case '.': ++pos; return Token(TokenType::DOT);
 		case '!': ++pos; return Token(TokenType::NOT);
 		case '(':
 			balanceStack.push('(');

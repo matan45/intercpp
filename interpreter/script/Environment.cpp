@@ -63,6 +63,60 @@ VariableValue Environment::evaluateFunction(const std::string& name,const std::v
 	throw std::runtime_error("Undefined function: " + name);
 }
 
+void Environment::registerClass(const std::string& name, ClassDefinitionNode* classDef)
+{
+	if (classRegistry.contains(name)) {
+		throw std::runtime_error("Class already registered: " + name);
+	}
+	classRegistry[name] = classDef;
+}
+
+VariableValue Environment::instantiateObject(const std::string& className, const std::vector<ASTNode*>& args)
+{
+	if (!classRegistry.contains(className)) {
+		throw std::runtime_error("Undefined class: " + className);
+	}
+
+	 ClassDefinitionNode* classDef = classRegistry.at(className);
+	std::unordered_map<std::string, VariableValue> objectMembers;
+
+	// Initialize member variables
+	for (const auto& [memberName, memberNode] : classDef->members) {
+		if (auto declNode = dynamic_cast<DeclarationNode*>(memberNode)) {
+			objectMembers[memberName] = declNode->evaluate(*this);
+		}
+	}
+
+	// Call constructor if it exists
+	if (classDef->constructor) {
+		// Evaluate constructor arguments
+		std::vector<VariableValue> evaluatedArgs;
+		for (ASTNode* arg : args) {
+			evaluatedArgs.push_back(arg->evaluate(*this));
+		}
+
+		// Push a new scope for the constructor
+		pushScope();
+
+		// Set constructor parameters in the new scope
+		for (size_t i = 0; i < evaluatedArgs.size(); ++i) {
+			const auto& param = classDef->constructor->parameters[i];
+			declareVariable(param.first, param.second);
+			setVariable(param.first, evaluatedArgs[i]);
+		}
+
+		// Execute the constructor body
+		classDef->constructor->body->evaluate(*this);
+
+		// Pop the constructor scope
+		popScope();
+	}
+
+	// Evaluate constructor logic if needed (add your constructor logic here)
+
+	return VariableValue(objectMembers); // Objects are represented as maps of their members
+}
+
 
 
 // Declare a variable by name and type

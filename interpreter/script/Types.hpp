@@ -26,6 +26,9 @@ enum class TokenType {
 	IMPORT,
 	RBRACKET,
 	LBRACKET,
+	CLASS,         
+	NEW,            
+	DOT,           
 	COLON,
 	END // End of input
 };
